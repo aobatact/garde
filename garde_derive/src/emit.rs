@@ -289,6 +289,9 @@ impl ToTokens for Rules<'_> {
                     model::ValidateRange::Equal(equal) => {
                         quote!((#equal, #equal))
                     }
+                    model::ValidateRange::Bounds(_) => {
+                        unreachable!("bounds syntax should not be used for length validation")
+                    }
                 },
                 Matches(path) => {
                     quote!((stringify!(#path), &self.#path))
@@ -298,6 +301,7 @@ impl ToTokens for Rules<'_> {
                     model::ValidateRange::LowerThan(max) => quote!((None, Some(#max))),
                     model::ValidateRange::Between(min, max) => quote!((Some(#min), Some(#max))),
                     model::ValidateRange::Equal(equal) => quote!((Some(#equal), Some(#equal))),
+                    model::ValidateRange::Bounds(bounds) => quote!(&#bounds),
                 },
                 Contains(expr) | Prefix(expr) | Suffix(expr) => {
                     quote_spanned!(expr.span() => (&#expr,))
@@ -332,12 +336,24 @@ impl ToTokens for Rules<'_> {
                 },
             };
 
-            quote! {
-                if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
-                    __garde_report.append(__garde_path(), __garde_error);
+            let function_call = match rule {
+                Range(model::ValidateRange::Bounds(_)) => {
+                    quote! {
+                        if let Err(__garde_error) = (#rules_mod::#name::apply_bounds)(&*__garde_binding, #args) {
+                            __garde_report.append(__garde_path(), __garde_error);
+                        }
+                    }
                 }
-            }
-            .to_tokens(tokens)
+                _ => {
+                    quote! {
+                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                            __garde_report.append(__garde_path(), __garde_error);
+                        }
+                    }
+                }
+            };
+            
+            function_call.to_tokens(tokens)
         }
     }
 }

@@ -407,7 +407,7 @@ impl Parse for model::RawLength {
 
         Ok(model::RawLength {
             mode: mode.unwrap_or_default(),
-            range: model::Range {
+            range: model::Range::MinMax {
                 span,
                 min,
                 max,
@@ -470,75 +470,87 @@ where
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let span = input.span();
 
-        let pairs = Punctuated::<syn::MetaNameValue, Token![,]>::parse_terminated(input)?;
+        // First, check if the input starts with an identifier (min, max, equal)
+        // If it does, parse as key-value pairs
+        if input.peek(syn::Ident) && input.peek2(Token![=]) {
+            // Parse as key-value pairs
+            let pairs = Punctuated::<syn::MetaNameValue, Token![,]>::parse_terminated(input)?;
 
-        let mut error = None;
+            let mut error = None;
 
-        let mut min = None::<T>;
-        let mut max = None::<T>;
-        let mut equal = None::<T>;
+            let mut min = None::<T>;
+            let mut max = None::<T>;
+            let mut equal = None::<T>;
 
-        for pair in pairs {
-            if pair.path.is_ident("min") {
-                if min.is_some() {
-                    error.maybe_fold(syn::Error::new(pair.path.span(), "duplicate argument"));
-                    continue;
-                }
-                let value = match <T as FromExpr>::from_expr(pair.value) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        error.maybe_fold(e);
+            for pair in pairs {
+                if pair.path.is_ident("min") {
+                    if min.is_some() {
+                        error.maybe_fold(syn::Error::new(pair.path.span(), "duplicate argument"));
                         continue;
                     }
-                };
-                min = Some(value);
-            } else if pair.path.is_ident("max") {
-                if max.is_some() {
-                    error.maybe_fold(syn::Error::new(pair.path.span(), "duplicate argument"));
-                    continue;
-                }
-                let value = match <T as FromExpr>::from_expr(pair.value) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        error.maybe_fold(e);
+                    let value = match <T as FromExpr>::from_expr(pair.value) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            error.maybe_fold(e);
+                            continue;
+                        }
+                    };
+                    min = Some(value);
+                } else if pair.path.is_ident("max") {
+                    if max.is_some() {
+                        error.maybe_fold(syn::Error::new(pair.path.span(), "duplicate argument"));
                         continue;
                     }
-                };
-                max = Some(value);
-            } else if pair.path.is_ident("equal") {
-                if equal.is_some() {
-                    error.maybe_fold(syn::Error::new(pair.path.span(), "duplicate argument"));
-                    continue;
-                }
-                let value = match <T as FromExpr>::from_expr(pair.value) {
-                    Ok(v) => v,
-                    Err(e) => {
-                        error.maybe_fold(e);
+                    let value = match <T as FromExpr>::from_expr(pair.value) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            error.maybe_fold(e);
+                            continue;
+                        }
+                    };
+                    max = Some(value);
+                } else if pair.path.is_ident("equal") {
+                    if equal.is_some() {
+                        error.maybe_fold(syn::Error::new(pair.path.span(), "duplicate argument"));
                         continue;
                     }
-                };
+                    let value = match <T as FromExpr>::from_expr(pair.value) {
+                        Ok(v) => v,
+                        Err(e) => {
+                            error.maybe_fold(e);
+                            continue;
+                        }
+                    };
 
-                if min.is_some() || max.is_some() {
-                    error.maybe_fold(syn::Error::new(
-                        pair.path.span(),
-                        "min or max conflict with equal",
-                    ));
+                    if min.is_some() || max.is_some() {
+                        error.maybe_fold(syn::Error::new(
+                            pair.path.span(),
+                            "min or max conflict with equal",
+                        ));
+                    }
+                    equal = Some(value);
+                } else {
+                    error.maybe_fold(syn::Error::new(pair.path.span(), "unexpected argument"));
+                    continue;
                 }
-                equal = Some(value);
-            } else {
-                error.maybe_fold(syn::Error::new(pair.path.span(), "unexpected argument"));
-                continue;
             }
-        }
 
-        if let Some(error) = error {
-            Err(error)
+            if let Some(error) = error {
+                Err(error)
+            } else {
+                Ok(model::Range::MinMax {
+                    span,
+                    min,
+                    max,
+                    equal,
+                })
+            }
         } else {
-            Ok(model::Range {
+            // Try to parse as a single expression (range bounds)
+            let expr = input.parse::<syn::Expr>()?;
+            Ok(model::Range::Bounds {
                 span,
-                min,
-                max,
-                equal,
+                expr: T::from_expr(expr)?,
             })
         }
     }

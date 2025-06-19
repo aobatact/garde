@@ -149,11 +149,17 @@ pub struct Str {
     pub value: String,
 }
 
-pub struct Range<T> {
-    pub span: Span,
-    pub min: Option<T>,
-    pub max: Option<T>,
-    pub equal: Option<T>,
+pub enum Range<T> {
+    MinMax {
+        span: Span,
+        min: Option<T>,
+        max: Option<T>,
+        equal: Option<T>,
+    },
+    Bounds {
+        span: Span,
+        expr: T,
+    },
 }
 
 pub struct List<T> {
@@ -304,6 +310,7 @@ pub enum ValidateRange<T> {
     LowerThan(T),
     Between(T, T),
     Equal(T),
+    Bounds(T),
 }
 
 pub enum ValidateVariant {

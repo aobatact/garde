@@ -433,116 +433,132 @@ where
                     model::ValidateRange::Between($wrapper(v1), $wrapper(v2))
                 }
                 model::ValidateRange::Equal(v) => model::ValidateRange::Equal($wrapper(v)),
+                model::ValidateRange::Bounds(v) => model::ValidateRange::Bounds($wrapper(v)),
             }
         }};
     }
 
-    let range = match (range.span, range.min, range.max, range.equal) {
-        (span, Some(model::Either::Left(min)), Some(model::Either::Left(max)), None) => {
-            map_validate_range!(
-                check_range(model::Range {
+    match range {
+        model::Range::Bounds { expr, .. } => Ok(model::ValidateRange::Bounds(expr)),
+        model::Range::MinMax { span, min, max, equal } => {
+            let range = match (span, min, max, equal) {
+                (span, Some(model::Either::Left(min)), Some(model::Either::Left(max)), None) => {
+                    map_validate_range!(
+                        check_range(model::Range::MinMax {
+                            span,
+                            min: Some(min),
+                            max: Some(max),
+                            equal: None,
+                        })?,
+                        model::Either::Left
+                    )
+                }
+                (span, Some(model::Either::Left(min)), None, None) => {
+                    map_validate_range!(
+                        check_range(model::Range::MinMax {
+                            span,
+                            min: Some(min),
+                            max: None,
+                            equal: None,
+                        })?,
+                        model::Either::Left
+                    )
+                }
+                (span, None, Some(model::Either::Left(max)), None) => {
+                    map_validate_range!(
+                        check_range(model::Range::MinMax {
+                            span,
+                            min: None,
+                            max: Some(max),
+                            equal: None,
+                        })?,
+                        model::Either::Left
+                    )
+                }
+                (span, None, None, Some(model::Either::Left(equal))) => {
+                    map_validate_range!(
+                        check_range(model::Range::MinMax {
+                            span,
+                            min: None,
+                            max: None,
+                            equal: Some(equal),
+                        })?,
+                        model::Either::Left
+                    )
+                }
+                (span, min, max, equal) => check_range_not_ord(model::Range::MinMax {
                     span,
-                    min: Some(min),
-                    max: Some(max),
-                    equal: None,
+                    min,
+                    max,
+                    equal,
                 })?,
-                model::Either::Left
-            )
-        }
-        (span, Some(model::Either::Left(min)), None, None) => {
-            map_validate_range!(
-                check_range(model::Range {
-                    span,
-                    min: Some(min),
-                    max: None,
-                    equal: None,
-                })?,
-                model::Either::Left
-            )
-        }
-        (span, None, Some(model::Either::Left(max)), None) => {
-            map_validate_range!(
-                check_range(model::Range {
-                    span,
-                    min: None,
-                    max: Some(max),
-                    equal: None,
-                })?,
-                model::Either::Left
-            )
-        }
-        (span, None, None, Some(model::Either::Left(equal))) => {
-            map_validate_range!(
-                check_range(model::Range {
-                    span,
-                    min: None,
-                    max: None,
-                    equal: Some(equal),
-                })?,
-                model::Either::Left
-            )
-        }
-        (span, min, max, equal) => check_range_not_ord(model::Range {
-            span,
-            min,
-            max,
-            equal,
-        })?,
-    };
+            };
 
-    Ok(range)
+            Ok(range)
+        }
+    }
 }
 
 fn check_range<T>(range: model::Range<T>) -> syn::Result<model::ValidateRange<T>>
 where
     T: PartialOrd,
 {
-    if let Some(equal) = range.equal {
-        return if range.min.is_some() || range.max.is_some() {
-            Err(syn::Error::new(
-                range.span,
-                "no `min` or `max` allowed if using `equal`",
-            ))
-        } else {
-            Ok(model::ValidateRange::Equal(equal))
-        };
-    };
+    match range {
+        model::Range::Bounds { expr, .. } => Ok(model::ValidateRange::Bounds(expr)),
+        model::Range::MinMax { span, min, max, equal } => {
+            if let Some(equal) = equal {
+                return if min.is_some() || max.is_some() {
+                    Err(syn::Error::new(
+                        span,
+                        "no `min` or `max` allowed if using `equal`",
+                    ))
+                } else {
+                    Ok(model::ValidateRange::Equal(equal))
+                };
+            };
 
-    match (range.min, range.max) {
-        (Some(min), Some(max)) if min <= max => Ok(model::ValidateRange::Between(min, max)),
-        (Some(_), Some(_)) => Err(syn::Error::new(
-            range.span,
-            "`min` must be lower than or equal to `max`",
-        )),
-        (Some(min), None) => Ok(model::ValidateRange::GreaterThan(min)),
-        (None, Some(max)) => Ok(model::ValidateRange::LowerThan(max)),
-        (None, None) => Err(syn::Error::new(
-            range.span,
-            "range must have at least one of `min`, `max`, `equal`",
-        )),
+            match (min, max) {
+                (Some(min), Some(max)) if min <= max => Ok(model::ValidateRange::Between(min, max)),
+                (Some(_), Some(_)) => Err(syn::Error::new(
+                    span,
+                    "`min` must be lower than or equal to `max`",
+                )),
+                (Some(min), None) => Ok(model::ValidateRange::GreaterThan(min)),
+                (None, Some(max)) => Ok(model::ValidateRange::LowerThan(max)),
+                (None, None) => Err(syn::Error::new(
+                    span,
+                    "range must have at least one of `min`, `max`, `equal`",
+                )),
+            }
+        }
     }
 }
 
 fn check_range_not_ord<T>(range: model::Range<T>) -> syn::Result<model::ValidateRange<T>> {
-    if let Some(equal) = range.equal {
-        return if range.min.is_some() || range.max.is_some() {
-            Err(syn::Error::new(
-                range.span,
-                "no `min` or `max` allowed if using `equal`",
-            ))
-        } else {
-            Ok(model::ValidateRange::Equal(equal))
-        };
-    };
+    match range {
+        model::Range::Bounds { expr, .. } => Ok(model::ValidateRange::Bounds(expr)),
+        model::Range::MinMax { span, min, max, equal } => {
+            if let Some(equal) = equal {
+                return if min.is_some() || max.is_some() {
+                    Err(syn::Error::new(
+                        span,
+                        "no `min` or `max` allowed if using `equal`",
+                    ))
+                } else {
+                    Ok(model::ValidateRange::Equal(equal))
+                };
+            };
 
-    match (range.min, range.max) {
-        (Some(min), Some(max)) => Ok(model::ValidateRange::Between(min, max)),
-        (Some(min), None) => Ok(model::ValidateRange::GreaterThan(min)),
-        (None, Some(max)) => Ok(model::ValidateRange::LowerThan(max)),
-        (None, None) => Err(syn::Error::new(
-            range.span,
-            "range must have at least one of `min`, `max`, `equal`",
-        )),
+            match (min, max) {
+                (Some(min), Some(max)) => Ok(model::ValidateRange::Between(min, max)),
+                (Some(min), None) => Ok(model::ValidateRange::GreaterThan(min)),
+                (None, Some(max)) => Ok(model::ValidateRange::LowerThan(max)),
+                (None, None) => Err(syn::Error::new(
+                    span,
+                    "range must have at least one of `min`, `max`, `equal`",
+                )),
+            }
+        }
     }
 }
 

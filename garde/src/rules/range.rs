@@ -13,6 +13,7 @@
 //! This trait is implemented for all primitive integer types.
 
 use std::fmt::Display;
+use std::ops::RangeBounds;
 
 use crate::error::Error;
 
@@ -29,6 +30,45 @@ pub fn apply<T: Bounds>(
             OutOfBounds::Upper => return Err(Error::new(format!("greater than {max}"))),
         }
     }
+    Ok(())
+}
+
+#[inline]
+pub fn apply_bounds<T, R>(v: &T, range: &R) -> Result<(), Error>
+where
+    T: PartialOrd + Display,
+    R: RangeBounds<T>,
+{
+    use std::ops::Bound;
+    
+    match range.start_bound() {
+        Bound::Included(val) => {
+            if v < val {
+                return Err(Error::new(format!("lower than {val}")));
+            }
+        }
+        Bound::Excluded(val) => {
+            if v <= val {
+                return Err(Error::new(format!("lower than or equal to {val}")));
+            }
+        }
+        Bound::Unbounded => {}
+    };
+
+    match range.end_bound() {
+        Bound::Included(val) => {
+            if v > val {
+                return Err(Error::new(format!("greater than {val}")));
+            }
+        }
+        Bound::Excluded(val) => {
+            if v >= val {
+                return Err(Error::new(format!("greater than or equal to {val}")));
+            }
+        }
+        Bound::Unbounded => {}
+    };
+
     Ok(())
 }
 

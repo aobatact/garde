@@ -3,18 +3,28 @@
 //! See also: [`chars` on `str`](https://doc.rust-lang.org/std/primitive.str.html#method.chars).
 
 use crate::error::Error;
+use std::ops::RangeBounds;
 
 pub fn apply<T: Bytes>(v: &T, (min, max): (usize, usize)) -> Result<(), Error> {
     v.validate_num_bytes(min, max)
 }
 
+pub fn apply_bounds<T: Bytes, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+    v.validate_num_bytes_bounds(range)
+}
+
 pub trait Bytes {
     fn validate_num_bytes(&self, min: usize, max: usize) -> Result<(), Error>;
+    fn validate_num_bytes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
 }
 
 impl<T: HasBytes> Bytes for T {
     fn validate_num_bytes(&self, min: usize, max: usize) -> Result<(), Error> {
         super::check_len(self.num_bytes(), min, max)
+    }
+    
+    fn validate_num_bytes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+        super::check_len_bounds(self.num_bytes(), range)
     }
 }
 
@@ -22,6 +32,13 @@ impl<T: Bytes> Bytes for Option<T> {
     fn validate_num_bytes(&self, min: usize, max: usize) -> Result<(), Error> {
         match self {
             Some(v) => v.validate_num_bytes(min, max),
+            None => Ok(()),
+        }
+    }
+    
+    fn validate_num_bytes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+        match self {
+            Some(v) => v.validate_num_bytes_bounds(range),
             None => Ok(()),
         }
     }

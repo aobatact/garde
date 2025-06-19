@@ -4,18 +4,28 @@
 //! For example, the length of a `String` is defined as the number of _bytes_ it stores.
 
 use crate::error::Error;
+use std::ops::RangeBounds;
 
 pub fn apply<T: Simple>(v: &T, (min, max): (usize, usize)) -> Result<(), Error> {
     v.validate_length(min, max)
 }
 
+pub fn apply_bounds<T: Simple, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+    v.validate_length_bounds(range)
+}
+
 pub trait Simple {
     fn validate_length(&self, min: usize, max: usize) -> Result<(), Error>;
+    fn validate_length_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
 }
 
 impl<T: HasSimpleLength> Simple for T {
     fn validate_length(&self, min: usize, max: usize) -> Result<(), Error> {
         super::check_len(self.length(), min, max)
+    }
+    
+    fn validate_length_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+        super::check_len_bounds(self.length(), range)
     }
 }
 
@@ -23,6 +33,13 @@ impl<T: Simple> Simple for Option<T> {
     fn validate_length(&self, min: usize, max: usize) -> Result<(), Error> {
         match self {
             Some(v) => v.validate_length(min, max),
+            None => Ok(()),
+        }
+    }
+    
+    fn validate_length_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+        match self {
+            Some(v) => v.validate_length_bounds(range),
             None => Ok(()),
         }
     }
@@ -90,11 +107,19 @@ impl<const N: usize, T> Simple for [T; N] {
     fn validate_length(&self, min: usize, max: usize) -> Result<(), Error> {
         super::check_len(self.len(), min, max)
     }
+    
+    fn validate_length_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+        super::check_len_bounds(self.len(), range)
+    }
 }
 
 impl<const N: usize, T> Simple for &[T; N] {
     fn validate_length(&self, min: usize, max: usize) -> Result<(), Error> {
         super::check_len(self.len(), min, max)
+    }
+    
+    fn validate_length_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+        super::check_len_bounds(self.len(), range)
     }
 }
 

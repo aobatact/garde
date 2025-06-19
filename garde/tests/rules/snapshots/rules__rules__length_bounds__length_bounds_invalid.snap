@@ -1,0 +1,142 @@
+---
+source: garde/tests/./rules/length_bounds.rs
+expression: snapshot
+---
+LengthBoundsTest {
+    inclusive_range: "hi",
+    exclusive_range: "test",
+    start_only: [
+        1,
+        2,
+        3,
+    ],
+    end_only: "short",
+    bytes_range: "hello",
+    chars_range: "world",
+}
+inclusive_range: length is lower than 5
+start_only: length is lower than 10
+
+LengthBoundsTest {
+    inclusive_range: "hello world!",
+    exclusive_range: "test",
+    start_only: [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+    ],
+    end_only: "short",
+    bytes_range: "hello",
+    chars_range: "world",
+}
+inclusive_range: length is greater than 10
+
+LengthBoundsTest {
+    inclusive_range: "hello",
+    exclusive_range: "test",
+    start_only: [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+    ],
+    end_only: "this is a very long string that exceeds fifty characters total",
+    bytes_range: "hello",
+    chars_range: "world",
+}
+end_only: length is greater than 50
+
+LengthBoundsTest {
+    inclusive_range: "hello",
+    exclusive_range: "test",
+    start_only: [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+    ],
+    end_only: "short",
+    bytes_range: "",
+    chars_range: "world",
+}
+bytes_range: length is lower than 1
+
+LengthBoundsTest {
+    inclusive_range: "hello",
+    exclusive_range: "test",
+    start_only: [
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+        1,
+    ],
+    end_only: "short",
+    bytes_range: "hello",
+    chars_range: "too many chars",
+}
+chars_range: length is greater than 5

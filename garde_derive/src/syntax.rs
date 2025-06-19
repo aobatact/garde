@@ -351,69 +351,198 @@ impl Parse for model::RawLength {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let span = input.span();
 
-        let args =
-            Punctuated::<ContinueOnFail<RawLengthArgument>, Token![,]>::parse_terminated(input)?;
+        // Check if it starts with a mode identifier
+        let starts_with_mode = if input.peek(syn::Ident) {
+            let ident = input.fork().parse::<syn::Ident>().unwrap();
+            matches!(ident.to_string().as_str(), "simple" | "bytes" | "chars" | "graphemes" | "utf16")
+        } else {
+            false
+        };
 
-        let mut error = None;
-
-        let mut mode = None;
-        let mut min = None;
-        let mut max = None;
-        let mut equal = None;
-
-        for arg in args {
-            let arg = match arg {
-                ContinueOnFail::Ok(arg) => arg,
-                ContinueOnFail::Err(e) => {
-                    error.maybe_fold(e);
-                    continue;
-                }
+        if starts_with_mode {
+            // Parse mode first
+            let mode_ident = input.parse::<syn::Ident>()?;
+            let mode = match mode_ident.to_string().as_str() {
+                "simple" => model::LengthMode::Simple,
+                "bytes" => model::LengthMode::Bytes,
+                "chars" => model::LengthMode::Chars,
+                "graphemes" => model::LengthMode::Graphemes,
+                "utf16" => model::LengthMode::Utf16,
+                _ => unreachable!(),
             };
-            match arg {
-                RawLengthArgument::Min(span, v) => {
-                    if min.is_some() {
-                        error.maybe_fold(syn::Error::new(span, "duplicate argument"))
-                    } else {
-                        min = Some(v)
+
+            // Check if next token is a comma
+            if input.peek(Token![,]) {
+                input.parse::<Token![,]>()?;
+                
+                // Check if what follows is a range expression or key-value pairs
+                if input.peek(syn::Ident) && (input.peek2(Token![=]) || 
+                    matches!(input.fork().parse::<syn::Ident>().unwrap().to_string().as_str(), "min" | "max" | "equal"))
+                {
+                    // Parse remaining key-value pairs
+                    let args = Punctuated::<ContinueOnFail<RawLengthArgument>, Token![,]>::parse_terminated(input)?;
+                    
+                    let mut error = None;
+                    let mut min = None;
+                    let mut max = None;
+                    let mut equal = None;
+
+                    for arg in args {
+                        let arg = match arg {
+                            ContinueOnFail::Ok(arg) => arg,
+                            ContinueOnFail::Err(e) => {
+                                error.maybe_fold(e);
+                                continue;
+                            }
+                        };
+                        match arg {
+                            RawLengthArgument::Min(span, v) => {
+                                if min.is_some() {
+                                    error.maybe_fold(syn::Error::new(span, "duplicate argument"))
+                                } else {
+                                    min = Some(v)
+                                }
+                            }
+                            RawLengthArgument::Max(span, v) => {
+                                if max.is_some() {
+                                    error.maybe_fold(syn::Error::new(span, "duplicate argument"))
+                                } else {
+                                    max = Some(v)
+                                }
+                            }
+                            RawLengthArgument::Equal(span, v) => {
+                                if equal.is_some() {
+                                    error.maybe_fold(syn::Error::new(span, "duplicate argument"))
+                                } else {
+                                    equal = Some(v)
+                                }
+                            }
+                            RawLengthArgument::Mode(span, _) => {
+                                error.maybe_fold(syn::Error::new(span, "duplicate mode"))
+                            }
+                        }
                     }
-                }
-                RawLengthArgument::Max(span, v) => {
-                    if max.is_some() {
-                        error.maybe_fold(syn::Error::new(span, "duplicate argument"))
-                    } else {
-                        max = Some(v)
+
+                    if let Some(error) = error {
+                        return Err(error);
                     }
+
+                    return Ok(model::RawLength {
+                        mode,
+                        range: model::Range::MinMax {
+                            span,
+                            min,
+                            max,
+                            equal,
+                        },
+                    });
+                } else {
+                    // Parse as range expression
+                    let expr = input.parse::<syn::Expr>()?;
+                    return Ok(model::RawLength {
+                        mode,
+                        range: model::Range::Bounds {
+                            span,
+                            expr: model::Either::Right(expr),
+                        },
+                    });
                 }
-                RawLengthArgument::Equal(span, v) => {
-                    if equal.is_some() {
-                        error.maybe_fold(syn::Error::new(span, "duplicate argument"))
-                    } else {
-                        equal = Some(v)
-                    }
-                }
-                RawLengthArgument::Mode(span, v) => {
-                    if mode.is_some() {
-                        error.maybe_fold(syn::Error::new(span, "duplicate argument"))
-                    } else {
-                        mode = Some(v)
-                    }
-                }
+            } else {
+                // Just a mode, no additional arguments
+                return Ok(model::RawLength {
+                    mode,
+                    range: model::Range::MinMax {
+                        span,
+                        min: None,
+                        max: None,
+                        equal: None,
+                    },
+                });
             }
         }
 
-        if let Some(error) = error {
-            return Err(error);
-        }
+        // Check if it's key-value pairs (min=, max=, equal=)
+        let is_key_value = if input.peek(syn::Ident) {
+            let ident = input.fork().parse::<syn::Ident>().unwrap();
+            matches!(ident.to_string().as_str(), "min" | "max" | "equal") && input.peek2(Token![=])
+        } else {
+            false
+        };
 
-        Ok(model::RawLength {
-            mode: mode.unwrap_or_default(),
-            range: model::Range::MinMax {
-                span,
-                min,
-                max,
-                equal,
-            },
-        })
+        if is_key_value {
+            // Parse as traditional key-value pairs
+            let args = Punctuated::<ContinueOnFail<RawLengthArgument>, Token![,]>::parse_terminated(input)?;
+            
+            let mut error = None;
+            let mut mode = None;
+            let mut min = None;
+            let mut max = None;
+            let mut equal = None;
+
+            for arg in args {
+                let arg = match arg {
+                    ContinueOnFail::Ok(arg) => arg,
+                    ContinueOnFail::Err(e) => {
+                        error.maybe_fold(e);
+                        continue;
+                    }
+                };
+                match arg {
+                    RawLengthArgument::Min(span, v) => {
+                        if min.is_some() {
+                            error.maybe_fold(syn::Error::new(span, "duplicate argument"))
+                        } else {
+                            min = Some(v)
+                        }
+                    }
+                    RawLengthArgument::Max(span, v) => {
+                        if max.is_some() {
+                            error.maybe_fold(syn::Error::new(span, "duplicate argument"))
+                        } else {
+                            max = Some(v)
+                        }
+                    }
+                    RawLengthArgument::Equal(span, v) => {
+                        if equal.is_some() {
+                            error.maybe_fold(syn::Error::new(span, "duplicate argument"))
+                        } else {
+                            equal = Some(v)
+                        }
+                    }
+                    RawLengthArgument::Mode(span, v) => {
+                        if mode.is_some() {
+                            error.maybe_fold(syn::Error::new(span, "duplicate argument"))
+                        } else {
+                            mode = Some(v)
+                        }
+                    }
+                }
+            }
+
+            if let Some(error) = error {
+                return Err(error);
+            }
+
+            return Ok(model::RawLength {
+                mode: mode.unwrap_or_default(),
+                range: model::Range::MinMax {
+                    span,
+                    min,
+                    max,
+                    equal,
+                },
+            });
+        } else {
+            // Try to parse as a range expression
+            let expr = input.parse::<syn::Expr>()?;
+            return Ok(model::RawLength {
+                mode: model::LengthMode::default(),
+                range: model::Range::Bounds {
+                    span,
+                    expr: model::Either::Right(expr),
+                },
+            });
+        }
     }
 }
 

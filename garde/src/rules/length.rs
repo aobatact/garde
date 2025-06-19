@@ -60,6 +60,7 @@ pub mod utf16;
 pub use utf16::HasUtf16CodeUnits;
 
 use crate::error::Error;
+use std::ops::RangeBounds;
 
 fn check_len(len: usize, min: usize, max: usize) -> Result<(), Error> {
     if len < min {
@@ -69,4 +70,38 @@ fn check_len(len: usize, min: usize, max: usize) -> Result<(), Error> {
     } else {
         Ok(())
     }
+}
+
+fn check_len_bounds<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> {
+    use std::ops::Bound;
+    
+    match range.start_bound() {
+        Bound::Included(&min) => {
+            if len < min {
+                return Err(Error::new(format!("length is lower than {min}")));
+            }
+        }
+        Bound::Excluded(&min) => {
+            if len <= min {
+                return Err(Error::new(format!("length is lower than or equal to {min}")));
+            }
+        }
+        Bound::Unbounded => {}
+    };
+
+    match range.end_bound() {
+        Bound::Included(&max) => {
+            if len > max {
+                return Err(Error::new(format!("length is greater than {max}")));
+            }
+        }
+        Bound::Excluded(&max) => {
+            if len >= max {
+                return Err(Error::new(format!("length is greater than or equal to {max}")));
+            }
+        }
+        Bound::Unbounded => {}
+    };
+
+    Ok(())
 }

@@ -289,8 +289,8 @@ impl ToTokens for Rules<'_> {
                     model::ValidateRange::Equal(equal) => {
                         quote!((#equal, #equal))
                     }
-                    model::ValidateRange::Bounds(_) => {
-                        unreachable!("bounds syntax should not be used for length validation")
+                    model::ValidateRange::Bounds(bounds) => {
+                        quote!(&(#bounds))
                     }
                 },
                 Matches(path) => {
@@ -301,7 +301,7 @@ impl ToTokens for Rules<'_> {
                     model::ValidateRange::LowerThan(max) => quote!((None, Some(#max))),
                     model::ValidateRange::Between(min, max) => quote!((Some(#min), Some(#max))),
                     model::ValidateRange::Equal(equal) => quote!((Some(#equal), Some(#equal))),
-                    model::ValidateRange::Bounds(bounds) => quote!(&#bounds),
+                    model::ValidateRange::Bounds(bounds) => quote!(&(#bounds)),
                 },
                 Contains(expr) | Prefix(expr) | Suffix(expr) => {
                     quote_spanned!(expr.span() => (&#expr,))
@@ -338,6 +338,17 @@ impl ToTokens for Rules<'_> {
 
             let function_call = match rule {
                 Range(model::ValidateRange::Bounds(_)) => {
+                    quote! {
+                        if let Err(__garde_error) = (#rules_mod::#name::apply_bounds)(&*__garde_binding, #args) {
+                            __garde_report.append(__garde_path(), __garde_error);
+                        }
+                    }
+                }
+                LengthSimple(model::ValidateRange::Bounds(_))
+                | LengthBytes(model::ValidateRange::Bounds(_))
+                | LengthChars(model::ValidateRange::Bounds(_))
+                | LengthGraphemes(model::ValidateRange::Bounds(_))
+                | LengthUtf16(model::ValidateRange::Bounds(_)) => {
                     quote! {
                         if let Err(__garde_error) = (#rules_mod::#name::apply_bounds)(&*__garde_binding, #args) {
                             __garde_report.append(__garde_path(), __garde_error);

@@ -162,6 +162,15 @@ pub enum Range<T> {
     },
 }
 
+impl<T> Range<T> {
+    pub fn span(&self) -> Span {
+        match self {
+            Range::MinMax { span, .. } => *span,
+            Range::Bounds { span, .. } => *span,
+        }
+    }
+}
+
 pub struct List<T> {
     pub contents: Vec<T>,
 }

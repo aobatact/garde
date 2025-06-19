@@ -503,9 +503,10 @@ fn check_range<T>(range: model::Range<T>) -> syn::Result<model::ValidateRange<T>
 where
     T: PartialOrd,
 {
+    let span = range.span();
     match range {
         model::Range::Bounds { expr, .. } => Ok(model::ValidateRange::Bounds(expr)),
-        model::Range::MinMax { span, min, max, equal } => {
+        model::Range::MinMax { min, max, equal, .. } => {
             if let Some(equal) = equal {
                 return if min.is_some() || max.is_some() {
                     Err(syn::Error::new(
@@ -535,9 +536,10 @@ where
 }
 
 fn check_range_not_ord<T>(range: model::Range<T>) -> syn::Result<model::ValidateRange<T>> {
+    let span = range.span();
     match range {
         model::Range::Bounds { expr, .. } => Ok(model::ValidateRange::Bounds(expr)),
-        model::Range::MinMax { span, min, max, equal } => {
+        model::Range::MinMax { min, max, equal, .. } => {
             if let Some(equal) = equal {
                 return if min.is_some() || max.is_some() {
                     Err(syn::Error::new(

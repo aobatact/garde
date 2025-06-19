@@ -149,25 +149,14 @@ pub struct Str {
     pub value: String,
 }
 
-pub enum Range<T> {
-    MinMax {
-        span: Span,
-        min: Option<T>,
-        max: Option<T>,
-        equal: Option<T>,
-    },
-    Bounds {
-        span: Span,
-        expr: T,
-    },
+pub struct Range<T> {
+    pub span: Span,
+    pub expr: T,
 }
 
 impl<T> Range<T> {
     pub fn span(&self) -> Span {
-        match self {
-            Range::MinMax { span, .. } => *span,
-            Range::Bounds { span, .. } => *span,
-        }
+        self.span
     }
 }
 
@@ -314,12 +303,8 @@ pub enum ValidatePattern {
     Expr(Expr),
 }
 
-pub enum ValidateRange<T> {
-    GreaterThan(T),
-    LowerThan(T),
-    Between(T, T),
-    Equal(T),
-    Bounds(T),
+pub struct ValidateRange<T> {
+    pub bounds: T,
 }
 
 pub enum ValidateVariant {

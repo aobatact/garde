@@ -18,23 +18,7 @@ use std::ops::RangeBounds;
 use crate::error::Error;
 
 #[inline]
-pub fn apply<T: Bounds>(
-    v: &T,
-    (min, max): (Option<T::Size>, Option<T::Size>),
-) -> Result<(), Error> {
-    let min = min.unwrap_or(T::MIN);
-    let max = max.unwrap_or(T::MAX);
-    if let Err(e) = v.validate_bounds(min, max) {
-        match e {
-            OutOfBounds::Lower => return Err(Error::new(format!("lower than {min}"))),
-            OutOfBounds::Upper => return Err(Error::new(format!("greater than {max}"))),
-        }
-    }
-    Ok(())
-}
-
-#[inline]
-pub fn apply_bounds<T, R>(v: &T, range: &R) -> Result<(), Error>
+fn apply_bounds_impl<T, R>(v: &T, range: &R) -> Result<(), Error>
 where
     T: PartialOrd + Display,
     R: RangeBounds<T>,
@@ -70,6 +54,52 @@ where
     };
 
     Ok(())
+}
+
+// Trait to extract the inner type for range validation
+pub trait RangeValidatable {
+    type Inner: PartialOrd + Display;
+    fn validate_with_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error>;
+}
+
+// Use macros to implement for specific types to avoid conflicts
+macro_rules! impl_range_validatable {
+    ($($T:ty),*) => {
+        $(
+            impl RangeValidatable for $T {
+                type Inner = $T;
+                
+                #[inline]
+                fn validate_with_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error> {
+                    apply_bounds_impl(self, range)
+                }
+            }
+            
+            impl RangeValidatable for Option<$T> {
+                type Inner = $T;
+                
+                #[inline]
+                fn validate_with_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error> {
+                    match self {
+                        Some(val) => apply_bounds_impl(val, range),
+                        None => Ok(()),
+                    }
+                }
+            }
+        )*
+    };
+}
+
+impl_range_validatable!(u8, u16, u32, u64, usize, u128, i8, i16, i32, i64, isize, i128, f32, f64);
+
+// Main apply_bounds function that works with the trait
+#[inline]
+pub fn apply_bounds<V, R>(v: &V, range: &R) -> Result<(), Error>
+where
+    V: RangeValidatable,
+    R: RangeBounds<V::Inner>,
+{
+    v.validate_with_range(range)
 }
 
 pub trait Bounds: PartialOrd {

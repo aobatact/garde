@@ -276,32 +276,16 @@ impl ToTokens for Rules<'_> {
                 | LengthBytes(range)
                 | LengthChars(range)
                 | LengthGraphemes(range)
-                | LengthUtf16(range) => match range {
-                    model::ValidateRange::GreaterThan(min) => {
-                        quote!((#min, usize::MAX))
-                    }
-                    model::ValidateRange::LowerThan(max) => {
-                        quote!((0usize, #max))
-                    }
-                    model::ValidateRange::Between(min, max) => {
-                        quote!((#min, #max))
-                    }
-                    model::ValidateRange::Equal(equal) => {
-                        quote!((#equal, #equal))
-                    }
-                    model::ValidateRange::Bounds(bounds) => {
-                        quote!(&(#bounds))
-                    }
+                | LengthUtf16(range) => {
+                    let bounds = &range.bounds;
+                    quote!(&(#bounds))
                 },
                 Matches(path) => {
                     quote!((stringify!(#path), &self.#path))
                 }
-                Range(range) => match range {
-                    model::ValidateRange::GreaterThan(min) => quote!((Some(#min), None)),
-                    model::ValidateRange::LowerThan(max) => quote!((None, Some(#max))),
-                    model::ValidateRange::Between(min, max) => quote!((Some(#min), Some(#max))),
-                    model::ValidateRange::Equal(equal) => quote!((Some(#equal), Some(#equal))),
-                    model::ValidateRange::Bounds(bounds) => quote!(&(#bounds)),
+                Range(range) => {
+                    let bounds = &range.bounds;
+                    quote!(&(#bounds))
                 },
                 Contains(expr) | Prefix(expr) | Suffix(expr) => {
                     quote_spanned!(expr.span() => (&#expr,))
@@ -337,18 +321,18 @@ impl ToTokens for Rules<'_> {
             };
 
             let function_call = match rule {
-                Range(model::ValidateRange::Bounds(_)) => {
+                Range(_) => {
                     quote! {
                         if let Err(__garde_error) = (#rules_mod::#name::apply_bounds)(&*__garde_binding, #args) {
                             __garde_report.append(__garde_path(), __garde_error);
                         }
                     }
                 }
-                LengthSimple(model::ValidateRange::Bounds(_))
-                | LengthBytes(model::ValidateRange::Bounds(_))
-                | LengthChars(model::ValidateRange::Bounds(_))
-                | LengthGraphemes(model::ValidateRange::Bounds(_))
-                | LengthUtf16(model::ValidateRange::Bounds(_)) => {
+                LengthSimple(_)
+                | LengthBytes(_)
+                | LengthChars(_)
+                | LengthGraphemes(_)
+                | LengthUtf16(_) => {
                     quote! {
                         if let Err(__garde_error) = (#rules_mod::#name::apply_bounds)(&*__garde_binding, #args) {
                             __garde_report.append(__garde_path(), __garde_error);

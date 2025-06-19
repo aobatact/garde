@@ -9,8 +9,10 @@ mod test_adapter {
         pub use garde::rules::length::*;
 
         pub mod simple {
-            pub fn apply(v: &str, (min, max): (usize, usize)) -> garde::Result {
-                if !(min..=max).contains(&v.len()) {
+            use std::ops::RangeBounds;
+            
+            pub fn apply_bounds<R: RangeBounds<usize>>(v: &str, range: &R) -> garde::Result {
+                if !range.contains(&v.len()) {
                     Err(garde::Error::new("my custom error message"))
                 } else {
                     Ok(())
@@ -22,7 +24,7 @@ mod test_adapter {
 
 #[derive(Debug, garde::Validate)]
 struct Test<'a> {
-    #[garde(adapt(test_adapter), length(min = 1))]
+    #[garde(adapt(test_adapter), length(1..))]
     v: &'a str,
 }
 

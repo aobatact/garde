@@ -2,13 +2,13 @@ use super::util;
 
 #[derive(Debug, garde::Validate)]
 struct Test<'a> {
-    #[garde(range(min = 10, max = 100))]
+    #[garde(range(10..=100))]
     field: u64,
-    #[garde(range(min = 0, max = self.field))]
+    #[garde(range(0..=self.field))]
     refers_to_field: u64,
-    #[garde(inner(range(min = 10, max = 100)))]
+    #[garde(inner(range(10..=100)))]
     inner: &'a [u64],
-    #[garde(range(min = 0., max = 100.))]
+    #[garde(range(0.0..=100.0))]
     float_field: f32,
 }
 
@@ -48,9 +48,9 @@ fn range_invalid() {
 
 #[derive(Debug, garde::Validate)]
 struct Exact<'a> {
-    #[garde(range(equal = 2))]
+    #[garde(range(2..=2))]
     field: u64,
-    #[garde(inner(range(equal = 2)))]
+    #[garde(inner(range(2..=2)))]
     inner: &'a [i32],
 }
 
@@ -89,9 +89,9 @@ fn exact_length_invalid() {
 
 #[derive(Debug, garde::Validate)]
 struct MinMaxEqual {
-    #[garde(range(min = 40, max = 40))]
+    #[garde(range(40..=40))]
     min_max: u64,
-    #[garde(range(equal = 40))]
+    #[garde(range(40..=40))]
     equal: u64,
 }
 

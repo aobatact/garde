@@ -3,7 +3,7 @@ use super::util;
 #[derive(Clone, Copy, Debug, garde::Validate)]
 #[garde(context((usize, usize) as ctx))]
 struct Inner<'a> {
-    #[garde(length(min = ctx.0, max = ctx.1))]
+    #[garde(length(ctx.0..=ctx.1))]
     field: &'a str,
 }
 

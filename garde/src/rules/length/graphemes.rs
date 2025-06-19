@@ -5,37 +5,21 @@
 use crate::error::Error;
 use std::ops::RangeBounds;
 
-pub fn apply<T: Graphemes>(v: &T, (min, max): (usize, usize)) -> Result<(), Error> {
-    v.validate_num_graphemes(min, max)
-}
-
 pub fn apply_bounds<T: Graphemes, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_num_graphemes_bounds(range)
 }
 
 pub trait Graphemes {
-    fn validate_num_graphemes(&self, min: usize, max: usize) -> Result<(), Error>;
     fn validate_num_graphemes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
 }
 
 impl<T: HasGraphemes> Graphemes for T {
-    fn validate_num_graphemes(&self, min: usize, max: usize) -> Result<(), Error> {
-        super::check_len(self.num_graphemes(), min, max)
-    }
-    
     fn validate_num_graphemes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
-        super::check_len_bounds(self.num_graphemes(), range)
+        super::apply_bounds(self.num_graphemes(), range)
     }
 }
 
 impl<T: Graphemes> Graphemes for Option<T> {
-    fn validate_num_graphemes(&self, min: usize, max: usize) -> Result<(), Error> {
-        match self {
-            Some(v) => v.validate_num_graphemes(min, max),
-            None => Ok(()),
-        }
-    }
-    
     fn validate_num_graphemes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
         match self {
             Some(v) => v.validate_num_graphemes_bounds(range),

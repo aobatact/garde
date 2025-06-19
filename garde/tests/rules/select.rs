@@ -2,13 +2,13 @@ use garde::Validate;
 
 #[derive(Validate)]
 pub struct UserIdentifier {
-    #[garde(range(max = 4))]
+    #[garde(range(..=4))]
     pub id: usize,
 }
 
 #[derive(Validate)]
 pub struct UserRole {
-    #[garde(ascii, length(min = 10))]
+    #[garde(ascii, length(10..))]
     pub name: String,
     #[garde(dive)]
     pub identifiers: Vec<UserIdentifier>,

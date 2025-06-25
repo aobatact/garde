@@ -154,12 +154,6 @@ pub struct Range<T> {
     pub expr: T,
 }
 
-impl<T> Range<T> {
-    pub fn span(&self) -> Span {
-        self.span
-    }
-}
-
 pub struct List<T> {
     pub contents: Vec<T>,
 }
@@ -304,7 +298,14 @@ pub enum ValidatePattern {
 }
 
 pub struct ValidateRange<T> {
+    pub span: Span,
     pub bounds: T,
+}
+
+impl<T> ValidateRange<T> {
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 pub enum ValidateVariant {

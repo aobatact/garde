@@ -278,14 +278,14 @@ impl ToTokens for Rules<'_> {
                 | LengthGraphemes(range)
                 | LengthUtf16(range) => {
                     let bounds = &range.bounds;
-                    quote!(&(#bounds))
+                    quote_spanned!(range.span() => &(#bounds))
                 },
                 Matches(path) => {
                     quote!((stringify!(#path), &self.#path))
                 }
                 Range(range) => {
                     let bounds = &range.bounds;
-                    quote!(&(#bounds))
+                    quote_spanned!(range.span() => (&(#bounds)))
                 },
                 Contains(expr) | Prefix(expr) | Suffix(expr) => {
                     quote_spanned!(expr.span() => (&#expr,))

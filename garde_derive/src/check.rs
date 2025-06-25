@@ -423,21 +423,15 @@ where
     L: PartialOrd,
 {
     Ok(model::ValidateRange {
+        span: range.span,
         bounds: range.expr,
     })
 }
 
-fn check_range<T>(range: model::Range<T>) -> syn::Result<model::ValidateRange<T>>
-where
-    T: PartialOrd,
-{
-    Ok(model::ValidateRange {
-        bounds: range.expr,
-    })
-}
 
 fn check_range_not_ord<T>(range: model::Range<T>) -> syn::Result<model::ValidateRange<T>> {
     Ok(model::ValidateRange {
+        span: range.span,
         bounds: range.expr,
     })
 }

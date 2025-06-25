@@ -1,0 +1,5 @@
+error: unexpected end of input, expected an expression
+ --> tests/ui/compile-fail/length_empty_args.rs
+  |
+  |     #[garde(length())]  // Empty range - invalid
+  |                    ^

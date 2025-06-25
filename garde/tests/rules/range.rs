@@ -95,12 +95,6 @@ struct MinMaxEqual {
     equal: u64,
 }
 
-// #[derive(Debug, garde::Validate)]
-// struct RangeBounds {
-//     #[garde(range(10..=100))]
-//     inclusive_range: u64,
-// }
-
 #[test]
 fn min_max_equal_length_valid() {
     util::check_ok(
@@ -132,28 +126,3 @@ fn min_max_equal_length_invalid() {
         &()
     )
 }
-
-// #[test]
-// fn range_bounds_valid() {
-//     util::check_ok(
-//         &[RangeBounds {
-//             inclusive_range: 50,
-//         }],
-//         &(),
-//     )
-// }
-// 
-// #[test]
-// fn range_bounds_invalid() {
-//     util::check_fail!(
-//         &[
-//             RangeBounds {
-//                 inclusive_range: 5,
-//             },
-//             RangeBounds {
-//                 inclusive_range: 101,
-//             }
-//         ],
-//         &()
-//     )
-// }

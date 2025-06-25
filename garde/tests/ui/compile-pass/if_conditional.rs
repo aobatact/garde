@@ -10,7 +10,7 @@ struct SimpleIf {
 struct MultipleRulesInIf {
     #[garde(skip)]
     strict: bool,
-    #[garde(if(cond = self.strict, ascii, length(min = 3, max = 20)))]
+    #[garde(if(cond = self.strict, ascii, length(3..=20)))]
     username: String,
 }
 
@@ -33,7 +33,7 @@ struct MultipleIfRules {
     check_length: bool,
     #[garde(
         if(cond = self.check_ascii, ascii),
-        if(cond = self.check_length, length(min = 5)),
+        if(cond = self.check_length, length(5..)),
         required
     )]
     value: Option<String>,
@@ -45,7 +45,7 @@ struct ComplexCondition {
     is_admin: bool,
     #[garde(skip)]
     is_active: bool,
-    #[garde(if(cond = self.is_admin && self.is_active, length(min = 16)))]
+    #[garde(if(cond = self.is_admin && self.is_active, length(16..)))]
     api_key: String,
 }
 
@@ -56,7 +56,7 @@ struct MixedConditions {
     validate_self: bool,
     #[garde(
         if(cond = self.validate_self, ascii),
-        if(cond = ctx.strict_mode, length(min = 8))
+        if(cond = ctx.strict_mode, length(8..))
     )]
     value: String,
 }

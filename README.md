@@ -40,9 +40,9 @@ use garde::{Validate, Valid};
 
 #[derive(Validate)]
 struct User<'a> {
-    #[garde(ascii, length(min=3, max=25))]
+    #[garde(ascii, length(3..=25))]
     username: &'a str,
-    #[garde(length(min=15))]
+    #[garde(length(15..))]
     password: &'a str,
 }
 
@@ -64,7 +64,7 @@ use garde::{Validate, Valid};
 #[derive(Validate)]
 enum Data {
     Struct {
-        #[garde(range(min=-10, max=10))]
+        #[garde(range(-10..=10))]
         field: i32,
     },
     Tuple(
@@ -93,9 +93,9 @@ if let Err(e) = data.validate() {
 | ipv6         | `#[garde(ipv6)]`                                                    | an IPv6 address                                                                                                   | -              |
 | credit card  | `#[garde(credit_card)]`                                             | a credit card number                                                                                              | `credit-card`  |
 | phone number | `#[garde(phone_number)]`                                            | a phone number                                                                                                    | `phone-number` |
-| length       | `#[garde(length(<mode>, min=<usize>, max=<usize>, equal=<usize>)]`  | a container with length in `min..=max` or `equal`                                                                 | -              |
+| length       | `#[garde(length(<mode>, <range>))]`  | a container with length in the specified range (e.g., `1..=10`, `5..`, `..=100`)                                                                 | -              |
 | matches      | `#[garde(matches(<field>))]`                                        | a field matches another field                                                                                     | -              |
-| range        | `#[garde(range(min=<expr>, max=<expr>, equal=<expr>))]`             | a number in the range `min..=max` or `equal`                                                                      | -              |
+| range        | `#[garde(range(<range>))]`             | a number in the specified range (e.g., `1..=10`, `5..`, `..=100`)                                                                      | -              |
 | contains     | `#[garde(contains(<string>))]`                                      | a string-like value containing a substring                                                                        | -              |
 | prefix       | `#[garde(prefix(<string>))]`                                        | a string-like value prefixed by some string                                                                       | -              |
 | suffix       | `#[garde(suffix(<string>))]`                                        | a string-like value suffixed by some string                                                                       | -              |
@@ -110,10 +110,12 @@ Additional notes:
 - `required` is only available for `Option` fields.
 - `dive` accepts an optional context: `#[garde(dive(self.other_field))]`
 - The `<mode>` argument for `length` is [explained here](#length-modes)
-- For `length` and `range`:
-  - If `equal` is defined, `min` and `max` must be omitted.
-  - Assuming `equal` is omitted, either `min` or `max` may be omitted, but not both.
-  - `min` and `max` use an *inclusive* upper bound (`min..=max`). Setting `min == max` is equivalent to using `equal`.
+- For `length` and `range`: Use Rust's standard range syntax:
+  - `start..end` - exclusive end (e.g., `1..10` allows values 1-9)
+  - `start..=end` - inclusive end (e.g., `1..=10` allows values 1-10)
+  - `start..` - no upper bound (e.g., `5..` allows values 5 and higher)
+  - `..=end` - no lower bound, inclusive end (e.g., `..=100` allows values up to 100)
+  - `..end` - no lower bound, exclusive end (e.g., `..100` allows values up to 99)
 - For `contains`, `prefix`, and `suffix`, the pattern must be a string literal, because the `Pattern` API [is currently unstable](https://github.com/rust-lang/rust/issues/27721).
 - For `if` conditional validation:
   - The condition expression can access `self` fields and context variables (e.g., `ctx`).
@@ -127,7 +129,7 @@ If most of the fields on your struct are annotated with `#[garde(skip)]`, you ma
 ```rust
 #[derive(garde::Validate)]
 struct Foo<'a> {
-    #[garde(length(min = 1))]
+    #[garde(length(1..))]
     a: &'a str,
 
     #[garde(skip)]
@@ -137,7 +139,7 @@ struct Foo<'a> {
 #[derive(garde::Validate)]
 #[garde(allow_unvalidated)]
 struct Bar<'a> {
-    #[garde(length(min = 1))]
+    #[garde(length(1..))]
     a: &'a str,
 
     b: &'a str, // this field will not be validated
@@ -163,10 +165,10 @@ and `std::collections`, where it validates the number of items.
 ```rust
 #[derive(garde::Validate)]
 struct Foo {
-    #[garde(length(min = 1, max = 100))]
+    #[garde(length(1..=100))]
     string: String,
 
-    #[garde(length(min = 1, max = 100))]
+    #[garde(length(1..=100))]
     collection: Vec<u32>
 }
 ```
@@ -180,16 +182,16 @@ The `bytes`, `graphemes`, `utf16`, and `chars` exist mostly for string validatio
 ```rust
 #[derive(garde::Validate)]
 struct Foo {
-    #[garde(length(bytes, min = 1, max = 100))]
+    #[garde(length(bytes, 1..=100))]
     a: String, // `a.len()`
     
-    #[garde(length(graphemes, min = 1, max = 100))]
+    #[garde(length(graphemes, 1..=100))]
     b: String, // `b.graphemes().count()`
     
-    #[garde(length(utf16, min = 1, max = 100))]
+    #[garde(length(utf16, 1..=100))]
     c: String, // `c.encode_utf16().count()`
     
-    #[garde(length(chars, min = 1, max = 100))]
+    #[garde(length(chars, 1..=100))]
     d: String, // `d.chars().count()`
 }
 ```
@@ -202,8 +204,8 @@ If you need to validate the "inner" type of a container, such as the `String` in
 #[derive(garde::Validate)]
 struct Test {
     #[garde(
-        length(min = 1),
-        inner(ascii, length(min = 1)), // wrap the rule in `inner`
+        length(1..),
+        inner(ascii, length(1..)), // wrap the rule in `inner`
     )]
     items: Vec<String>,
 }
@@ -219,8 +221,8 @@ To validate a deeply-nested type, such as `Vec<Option<String>>`, the `inner` mod
 #[derive(garde::Validate)]
 struct Test {
     #[garde(
-        length(min = 1), // applies to `Vec`
-        inner(inner(ascii, length(min = 1))), // applies to `String`
+        length(1..), // applies to `Vec`
+        inner(inner(ascii, length(1..))), // applies to `String`
     )]
     items: Vec<Option<String>>,
 }
@@ -231,9 +233,9 @@ You can apply separate rules to every level of the nested type:
 #[derive(garde::Validate)]
 struct Test {
     #[garde(
-        length(min = 1), // applies to `Vec`
+        length(1..), // applies to `Vec`
         inner(required), // applies to `Option`
-        inner(inner(ascii, length(min = 1))), // applies to `String`
+        inner(inner(ascii, length(1..))), // applies to `String`
     )]
     items: Vec<Option<String>>,
 }
@@ -247,7 +249,7 @@ with `#[garde(transparent)]`:
 ```rust
 #[derive(garde::Validate)]
 #[garde(transparent)]
-struct Username(#[garde(length(min = 3, max = 20))] String);
+struct Username(#[garde(length(3..=20))] String);
 
 #[derive(garde::Validate)]
 struct User {
@@ -286,7 +288,7 @@ Every rule works on `Option<T>` fields. The field will only be validated if it i
 ```rust
 #[derive(garde::Validate)]
 struct Test {
-    #[garde(required, ascii, length(min = 1))]
+    #[garde(required, ascii, length(1..))]
     value: Option<String>,
 }
 ```
@@ -355,7 +357,7 @@ fn my_equals(other: &str) -> impl FnOnce(&str, &()) -> garde::Result + '_ {
 
 #[derive(garde::Validate)]
 struct User {
-    #[garde(length(min = 1, max = 255))]
+    #[garde(length(1..=255))]
     password: String,
     // Combined with `self` access in rules:
     #[garde(custom(my_equals(&self.password2)))]
@@ -379,7 +381,7 @@ struct Config {
 #[derive(garde::Validate)]
 #[garde(context(Config as ctx))]
 struct User {
-    #[garde(length(min = ctx.username.min, max = ctx.username.max))]
+    #[garde(length(ctx.username.min..=ctx.username.max))]
     username: String,
 }
 ```
@@ -395,7 +397,7 @@ struct User {
     is_admin: bool,
     
     // Only validate username format for admin users
-    #[garde(if(cond = self.is_admin, ascii, length(min = 8)))]
+    #[garde(if(cond = self.is_admin, ascii, length(8..)))]
     username: String,
 }
 ```
@@ -408,7 +410,7 @@ struct Account {
     #[garde(skip)]
     strict_mode: bool,
     
-    #[garde(if(cond = self.strict_mode, ascii, length(min = 12), alphanumeric))]
+    #[garde(if(cond = self.strict_mode, ascii, length(12..), alphanumeric))]
     password: String,
 }
 ```
@@ -425,7 +427,7 @@ struct Document {
     
     #[garde(
         if(cond = self.check_format, ascii),
-        if(cond = self.check_length, length(min = 10, max = 100)),
+        if(cond = self.check_length, length(10..=100)),
         required  // This rule always applies
     )]
     content: Option<String>,
@@ -438,7 +440,7 @@ Conditional validation also works with context:
 #[derive(garde::Validate)]
 #[garde(context(Config as ctx))]
 struct ApiKey {
-    #[garde(if(cond = ctx.production && self.is_service_account, length(min = 32)))]
+    #[garde(if(cond = ctx.production && self.is_service_account, length(32..)))]
     key: String,
     
     #[garde(skip)]
@@ -460,7 +462,7 @@ struct AdvancedUser {
     #[garde(skip)]
     is_active: bool,
     
-    #[garde(if(cond = self.is_admin && self.is_active, length(min = 16)))]
+    #[garde(if(cond = self.is_admin && self.is_active, length(16..)))]
     admin_token: String,
 }
 ```
@@ -483,7 +485,7 @@ impl garde::rules::length::HasSimpleLength for MyString {
 #[derive(garde::Validate)]
 struct Foo {
     // Now the `length` check may be used with `MyString`
-    #[garde(length(min = 1, max = 1000))]
+    #[garde(length(1..=1000))]
     field: MyString,
 }
 ```
@@ -524,7 +526,7 @@ struct Foo {
 
 #[derive(garde::Validate)]
 struct Bar {
-  #[garde(range(min = 1, max = 10))]
+  #[garde(range(1..=10))]
   value: u32,
 }
 ```
@@ -544,8 +546,8 @@ mod my_str_adapter {
 
         pub mod simple {
             // re-implement `simple`, but _only_ for the concrete type &str!
-            pub fn apply(v: &str, (min, max): (usize, usize)) -> garde::Result {
-                if !(min..=max).contains(&v.len()) {
+            pub fn apply<R: std::ops::RangeBounds<usize>>(v: &str, range: &R) -> garde::Result {
+                if !range.contains(&v.len()) {
                     Err(garde::Error::new("my custom error message"))
                 } else {
                     Ok(())
@@ -568,7 +570,7 @@ add an `adapt` attribute to a field:
 struct Stuff<'a> {
     #[garde(
         adapt(my_str_adapter),
-        length(min = 1),
+        length(1..),
         ascii,
     )]
     v: &'a str,

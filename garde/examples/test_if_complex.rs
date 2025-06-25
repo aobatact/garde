@@ -9,7 +9,7 @@ struct User {
     #[garde(skip)]
     validate_email: bool,
 
-    #[garde(if(cond = self.is_admin && ctx.strict_mode, length(min = 8)))]
+    #[garde(if(cond = self.is_admin && ctx.strict_mode, length(8..)))]
     username: String,
 
     #[garde(
@@ -19,8 +19,8 @@ struct User {
     email: Option<String>,
 
     #[garde(
-        if(cond = ctx.strict_mode, length(min = 16)),
-        if(cond = !ctx.strict_mode, length(min = 4))
+        if(cond = ctx.strict_mode, length(16..)),
+        if(cond = !ctx.strict_mode, length(4..))
     )]
     password: String,
 }

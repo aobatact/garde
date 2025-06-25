@@ -1,0 +1,21 @@
+---
+source: garde/tests/./rules/length_bounds.rs
+expression: snapshot
+---
+UnicodeRangeTest {
+    graphemes: "",
+    utf16: "test",
+}
+graphemes: length is lower than 1
+
+UnicodeRangeTest {
+    graphemes: "😂😂😂",
+    utf16: "test",
+}
+graphemes: length is greater than 2
+
+UnicodeRangeTest {
+    graphemes: "😂",
+    utf16: "tests",
+}
+utf16: length is greater than 4

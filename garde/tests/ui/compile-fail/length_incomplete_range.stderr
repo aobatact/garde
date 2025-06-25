@@ -1,0 +1,5 @@
+error: unexpected end of input, expected an expression
+ --> tests/ui/compile-fail/length_incomplete_range.rs
+  |
+  |     #[garde(length(10..=))]  // Invalid range syntax: missing end
+  |                         ^

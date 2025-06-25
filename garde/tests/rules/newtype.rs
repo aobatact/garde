@@ -5,7 +5,7 @@ use super::util;
 #[derive(Debug, garde::Validate)]
 #[garde(transparent)]
 struct NonEmptyStr_Struct<'a> {
-    #[garde(length(min = 1))]
+    #[garde(length(1..))]
     v: &'a str,
 }
 
@@ -21,7 +21,7 @@ fn newtype_struct_invalid() {
 
 #[derive(Debug, garde::Validate)]
 #[garde(transparent)]
-struct NonEmptyStr_Tuple<'a>(#[garde(length(min = 1))] &'a str);
+struct NonEmptyStr_Tuple<'a>(#[garde(length(1..))] &'a str);
 
 #[test]
 fn newtype_tuple_valid() {

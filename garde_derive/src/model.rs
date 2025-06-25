@@ -151,9 +151,7 @@ pub struct Str {
 
 pub struct Range<T> {
     pub span: Span,
-    pub min: Option<T>,
-    pub max: Option<T>,
-    pub equal: Option<T>,
+    pub expr: T,
 }
 
 pub struct List<T> {
@@ -299,11 +297,15 @@ pub enum ValidatePattern {
     Expr(Expr),
 }
 
-pub enum ValidateRange<T> {
-    GreaterThan(T),
-    LowerThan(T),
-    Between(T, T),
-    Equal(T),
+pub struct ValidateRange<T> {
+    pub span: Span,
+    pub bounds: T,
+}
+
+impl<T> ValidateRange<T> {
+    pub fn span(&self) -> Span {
+        self.span
+    }
 }
 
 pub enum ValidateVariant {

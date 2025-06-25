@@ -276,28 +276,16 @@ impl ToTokens for Rules<'_> {
                 | LengthBytes(range)
                 | LengthChars(range)
                 | LengthGraphemes(range)
-                | LengthUtf16(range) => match range {
-                    model::ValidateRange::GreaterThan(min) => {
-                        quote!((#min, usize::MAX))
-                    }
-                    model::ValidateRange::LowerThan(max) => {
-                        quote!((0usize, #max))
-                    }
-                    model::ValidateRange::Between(min, max) => {
-                        quote!((#min, #max))
-                    }
-                    model::ValidateRange::Equal(equal) => {
-                        quote!((#equal, #equal))
-                    }
+                | LengthUtf16(range) => {
+                    let bounds = &range.bounds;
+                    quote_spanned!(range.span() => &(#bounds))
                 },
                 Matches(path) => {
                     quote!((stringify!(#path), &self.#path))
                 }
-                Range(range) => match range {
-                    model::ValidateRange::GreaterThan(min) => quote!((Some(#min), None)),
-                    model::ValidateRange::LowerThan(max) => quote!((None, Some(#max))),
-                    model::ValidateRange::Between(min, max) => quote!((Some(#min), Some(#max))),
-                    model::ValidateRange::Equal(equal) => quote!((Some(#equal), Some(#equal))),
+                Range(range) => {
+                    let bounds = &range.bounds;
+                    quote_spanned!(range.span() => (&(#bounds)))
                 },
                 Contains(expr) | Prefix(expr) | Suffix(expr) => {
                     quote_spanned!(expr.span() => (&#expr,))
@@ -332,12 +320,35 @@ impl ToTokens for Rules<'_> {
                 },
             };
 
-            quote! {
-                if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
-                    __garde_report.append(__garde_path(), __garde_error);
+            let function_call = match rule {
+                Range(_) => {
+                    quote! {
+                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                            __garde_report.append(__garde_path(), __garde_error);
+                        }
+                    }
                 }
-            }
-            .to_tokens(tokens)
+                LengthSimple(_)
+                | LengthBytes(_)
+                | LengthChars(_)
+                | LengthGraphemes(_)
+                | LengthUtf16(_) => {
+                    quote! {
+                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                            __garde_report.append(__garde_path(), __garde_error);
+                        }
+                    }
+                }
+                _ => {
+                    quote! {
+                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                            __garde_report.append(__garde_path(), __garde_error);
+                        }
+                    }
+                }
+            };
+            
+            function_call.to_tokens(tokens)
         }
     }
 }

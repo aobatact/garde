@@ -1,0 +1,5 @@
+error[E0425]: cannot find value `not_a_range` in this scope
+ --> tests/ui/compile-fail/length_invalid_identifier.rs
+  |
+  |     #[garde(length(not_a_range))]  // Invalid: not a range expression
+  |                    ^^^^^^^^^^^ not found in this scope

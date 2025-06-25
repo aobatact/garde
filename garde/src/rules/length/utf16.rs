@@ -3,22 +3,25 @@
 use crate::error::Error;
 use std::ops::RangeBounds;
 
-pub fn apply<T: Utf16CodeUnits, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+pub fn apply<T: Utf16CodeUnits<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_num_code_units(range)
 }
 
-pub trait Utf16CodeUnits {
-    fn validate_num_code_units<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
+pub trait Utf16CodeUnits<R: RangeBounds<usize>> {
+    fn validate_num_code_units(&self, range: &R) -> Result<(), Error>;
 }
 
-impl<T: HasUtf16CodeUnits> Utf16CodeUnits for T {
-    fn validate_num_code_units<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+impl<T: HasUtf16CodeUnits, R: RangeBounds<usize>> Utf16CodeUnits<R> for T {
+    fn validate_num_code_units(&self, range: &R) -> Result<(), Error> {
         super::apply(self.num_code_units(), range)
     }
 }
 
-impl<T: Utf16CodeUnits> Utf16CodeUnits for Option<T> {
-    fn validate_num_code_units<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+impl<T, R: RangeBounds<usize>> Utf16CodeUnits<R> for Option<T>
+where
+    T: Utf16CodeUnits<R>,
+{
+    fn validate_num_code_units(&self, range: &R) -> Result<(), Error> {
         match self {
             Some(v) => v.validate_num_code_units(range),
             None => Ok(()),

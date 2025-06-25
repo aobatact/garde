@@ -64,7 +64,7 @@ use std::ops::RangeBounds;
 
 pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> {
     use std::ops::Bound;
-    
+
     match range.start_bound() {
         Bound::Included(&min) => {
             if len < min {

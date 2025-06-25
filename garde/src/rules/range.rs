@@ -24,7 +24,7 @@ where
     R: RangeBounds<T>,
 {
     use std::ops::Bound;
-    
+
     match range.start_bound() {
         Bound::Included(val) => {
             if v < val {
@@ -68,16 +68,16 @@ macro_rules! impl_range_validatable {
         $(
             impl RangeValidatable for $T {
                 type Inner = $T;
-                
+
                 #[inline]
                 fn validate_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error> {
                     apply_impl(self, range)
                 }
             }
-            
+
             impl RangeValidatable for Option<$T> {
                 type Inner = $T;
-                
+
                 #[inline]
                 fn validate_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error> {
                     match self {

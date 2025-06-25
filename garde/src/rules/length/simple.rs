@@ -6,22 +6,25 @@
 use crate::error::Error;
 use std::ops::RangeBounds;
 
-pub fn apply<T: Simple, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+pub fn apply<T: Simple<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_length(range)
 }
 
-pub trait Simple {
-    fn validate_length<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
+pub trait Simple<R: RangeBounds<usize>> {
+    fn validate_length(&self, range: &R) -> Result<(), Error>;
 }
 
-impl<T: HasSimpleLength> Simple for T {
-    fn validate_length<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+impl<T: HasSimpleLength, R: RangeBounds<usize>> Simple<R> for T {
+    fn validate_length(&self, range: &R) -> Result<(), Error> {
         super::apply(self.length(), range)
     }
 }
 
-impl<T: Simple> Simple for Option<T> {
-    fn validate_length<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+impl<T, R: RangeBounds<usize>> Simple<R> for Option<T>
+where
+    T: Simple<R>,
+{
+    fn validate_length(&self, range: &R) -> Result<(), Error> {
         match self {
             Some(v) => v.validate_length(range),
             None => Ok(()),
@@ -87,14 +90,14 @@ impl_via_len!(in<T> Vec<T>);
 impl_via_len!(in<'a, T> &'a Vec<T>);
 impl_via_len!(in<'a, T> &'a [T]);
 
-impl<const N: usize, T> Simple for [T; N] {
-    fn validate_length<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+impl<const N: usize, T, R: RangeBounds<usize>> Simple<R> for [T; N] {
+    fn validate_length(&self, range: &R) -> Result<(), Error> {
         super::apply(self.len(), range)
     }
 }
 
-impl<const N: usize, T> Simple for &[T; N] {
-    fn validate_length<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+impl<const N: usize, T, R: RangeBounds<usize>> Simple<R> for &[T; N] {
+    fn validate_length(&self, range: &R) -> Result<(), Error> {
         super::apply(self.len(), range)
     }
 }

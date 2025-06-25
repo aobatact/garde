@@ -5,22 +5,25 @@
 use crate::error::Error;
 use std::ops::RangeBounds;
 
-pub fn apply<T: Bytes, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+pub fn apply<T: Bytes<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_num_bytes(range)
 }
 
-pub trait Bytes {
-    fn validate_num_bytes<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
+pub trait Bytes<R: RangeBounds<usize>> {
+    fn validate_num_bytes(&self, range: &R) -> Result<(), Error>;
 }
 
-impl<T: HasBytes> Bytes for T {
-    fn validate_num_bytes<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+impl<T: HasBytes, R: RangeBounds<usize>> Bytes<R> for T {
+    fn validate_num_bytes(&self, range: &R) -> Result<(), Error> {
         super::apply(self.num_bytes(), range)
     }
 }
 
-impl<T: Bytes> Bytes for Option<T> {
-    fn validate_num_bytes<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+impl<T, R: RangeBounds<usize>> Bytes<R> for Option<T>
+where
+    T: Bytes<R>,
+{
+    fn validate_num_bytes(&self, range: &R) -> Result<(), Error> {
         match self {
             Some(v) => v.validate_num_bytes(range),
             None => Ok(()),

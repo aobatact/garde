@@ -6,23 +6,23 @@ use crate::error::Error;
 use std::ops::RangeBounds;
 
 pub fn apply<T: Graphemes, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
-    v.validate_num_graphemes_bounds(range)
+    v.validate_num_graphemes(range)
 }
 
 pub trait Graphemes {
-    fn validate_num_graphemes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
+    fn validate_num_graphemes<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
 }
 
 impl<T: HasGraphemes> Graphemes for T {
-    fn validate_num_graphemes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
-        super::apply_bounds(self.num_graphemes(), range)
+    fn validate_num_graphemes<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+        super::apply(self.num_graphemes(), range)
     }
 }
 
 impl<T: Graphemes> Graphemes for Option<T> {
-    fn validate_num_graphemes_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+    fn validate_num_graphemes<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
         match self {
-            Some(v) => v.validate_num_graphemes_bounds(range),
+            Some(v) => v.validate_num_graphemes(range),
             None => Ok(()),
         }
     }

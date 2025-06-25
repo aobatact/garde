@@ -18,7 +18,7 @@ use std::ops::RangeBounds;
 use crate::error::Error;
 
 #[inline]
-fn apply_bounds_impl<T, R>(v: &T, range: &R) -> Result<(), Error>
+fn apply_impl<T, R>(v: &T, range: &R) -> Result<(), Error>
 where
     T: PartialOrd + Display,
     R: RangeBounds<T>,
@@ -59,7 +59,7 @@ where
 // Trait to extract the inner type for range validation
 pub trait RangeValidatable {
     type Inner: PartialOrd + Display;
-    fn validate_with_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error>;
+    fn validate_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error>;
 }
 
 // Use macros to implement for specific types to avoid conflicts
@@ -70,8 +70,8 @@ macro_rules! impl_range_validatable {
                 type Inner = $T;
                 
                 #[inline]
-                fn validate_with_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error> {
-                    apply_bounds_impl(self, range)
+                fn validate_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error> {
+                    apply_impl(self, range)
                 }
             }
             
@@ -79,9 +79,9 @@ macro_rules! impl_range_validatable {
                 type Inner = $T;
                 
                 #[inline]
-                fn validate_with_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error> {
+                fn validate_range<R: RangeBounds<Self::Inner>>(&self, range: &R) -> Result<(), Error> {
                     match self {
-                        Some(val) => apply_bounds_impl(val, range),
+                        Some(val) => apply_impl(val, range),
                         None => Ok(()),
                     }
                 }
@@ -99,7 +99,7 @@ where
     V: RangeValidatable,
     R: RangeBounds<V::Inner>,
 {
-    v.validate_with_range(range)
+    v.validate_range(range)
 }
 
 pub trait Bounds: PartialOrd {

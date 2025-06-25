@@ -6,23 +6,23 @@ use crate::error::Error;
 use std::ops::RangeBounds;
 
 pub fn apply<T: Chars, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
-    v.validate_num_chars_bounds(range)
+    v.validate_num_chars(range)
 }
 
 pub trait Chars {
-    fn validate_num_chars_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
+    fn validate_num_chars<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error>;
 }
 
 impl<T: HasChars> Chars for T {
-    fn validate_num_chars_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
-        super::apply_bounds(self.num_chars(), range)
+    fn validate_num_chars<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+        super::apply(self.num_chars(), range)
     }
 }
 
 impl<T: Chars> Chars for Option<T> {
-    fn validate_num_chars_bounds<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
+    fn validate_num_chars<R: RangeBounds<usize>>(&self, range: &R) -> Result<(), Error> {
         match self {
-            Some(v) => v.validate_num_chars_bounds(range),
+            Some(v) => v.validate_num_chars(range),
             None => Ok(()),
         }
     }

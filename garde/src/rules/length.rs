@@ -62,7 +62,7 @@ pub use utf16::HasUtf16CodeUnits;
 use crate::error::Error;
 use std::ops::RangeBounds;
 
-pub fn apply_bounds<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> {
+pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> {
     use std::ops::Bound;
     
     match range.start_bound() {

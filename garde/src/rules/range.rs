@@ -28,45 +28,6 @@ where
     v.validate_range(range)
 }
 
-#[inline]
-fn apply_impl<T, R>(v: &T, range: &R) -> Result<(), Error>
-where
-    T: PartialOrd + Display,
-    R: RangeBounds<T>,
-{
-    use std::ops::Bound;
-
-    match range.start_bound() {
-        Bound::Included(val) => {
-            if v < val {
-                return Err(Error::new(format!("lower than {val}")));
-            }
-        }
-        Bound::Excluded(val) => {
-            if v <= val {
-                return Err(Error::new(format!("lower than or equal to {val}")));
-            }
-        }
-        Bound::Unbounded => {}
-    };
-
-    match range.end_bound() {
-        Bound::Included(val) => {
-            if v > val {
-                return Err(Error::new(format!("greater than {val}")));
-            }
-        }
-        Bound::Excluded(val) => {
-            if v >= val {
-                return Err(Error::new(format!("greater than or equal to {val}")));
-            }
-        }
-        Bound::Unbounded => {}
-    };
-
-    Ok(())
-}
-
 // Trait to extract the inner type for range validation
 pub trait RangeValidatable<T: PartialOrd + Display, R: RangeBounds<T>> {
     fn validate_range(&self, range: &R) -> Result<(), Error>;
@@ -74,14 +35,44 @@ pub trait RangeValidatable<T: PartialOrd + Display, R: RangeBounds<T>> {
 
 impl<T: PartialOrd + Display, R: RangeBounds<T>> RangeValidatable<T, R> for T {
     fn validate_range(&self, range: &R) -> Result<(), Error> {
-        apply_impl(self, range)
+        use std::ops::Bound;
+
+        match range.start_bound() {
+            Bound::Included(val) => {
+                if self < val {
+                    return Err(Error::new(format!("lower than {val}")));
+                }
+            }
+            Bound::Excluded(val) => {
+                if self <= val {
+                    return Err(Error::new(format!("lower than or equal to {val}")));
+                }
+            }
+            Bound::Unbounded => {}
+        };
+
+        match range.end_bound() {
+            Bound::Included(val) => {
+                if self > val {
+                    return Err(Error::new(format!("greater than {val}")));
+                }
+            }
+            Bound::Excluded(val) => {
+                if self >= val {
+                    return Err(Error::new(format!("greater than or equal to {val}")));
+                }
+            }
+            Bound::Unbounded => {}
+        };
+
+        Ok(())
     }
 }
 
 impl<T: PartialOrd + Display, U: RangeBounds<T>> RangeValidatable<T, U> for Option<T> {
     fn validate_range(&self, range: &U) -> Result<(), Error> {
         match self {
-            Some(val) => apply_impl(val, range),
+            Some(val) => val.validate_range(range),
             None => Ok(()),
         }
     }

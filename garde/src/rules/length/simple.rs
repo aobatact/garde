@@ -6,7 +6,7 @@
 use crate::error::Error;
 use std::ops::RangeBounds;
 
-pub fn apply_bounds<T: Simple, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+pub fn apply<T: Simple, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_length_bounds(range)
 }
 

@@ -11,7 +11,7 @@ mod test_adapter {
         pub mod simple {
             use std::ops::RangeBounds;
             
-            pub fn apply_bounds<R: RangeBounds<usize>>(v: &str, range: &R) -> garde::Result {
+            pub fn apply<R: RangeBounds<usize>>(v: &str, range: &R) -> garde::Result {
                 if !range.contains(&v.len()) {
                     Err(garde::Error::new("my custom error message"))
                 } else {

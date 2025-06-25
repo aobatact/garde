@@ -92,9 +92,9 @@ macro_rules! impl_range_validatable {
 
 impl_range_validatable!(u8, u16, u32, u64, usize, u128, i8, i16, i32, i64, isize, i128, f32, f64);
 
-// Main apply_bounds function that works with the trait
+// Main apply function that works with the trait
 #[inline]
-pub fn apply_bounds<V, R>(v: &V, range: &R) -> Result<(), Error>
+pub fn apply<V, R>(v: &V, range: &R) -> Result<(), Error>
 where
     V: RangeValidatable,
     R: RangeBounds<V::Inner>,

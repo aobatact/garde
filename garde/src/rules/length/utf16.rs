@@ -3,7 +3,7 @@
 use crate::error::Error;
 use std::ops::RangeBounds;
 
-pub fn apply_bounds<T: Utf16CodeUnits, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+pub fn apply<T: Utf16CodeUnits, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_num_code_units_bounds(range)
 }
 

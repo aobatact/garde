@@ -323,7 +323,7 @@ impl ToTokens for Rules<'_> {
             let function_call = match rule {
                 Range(_) => {
                     quote! {
-                        if let Err(__garde_error) = (#rules_mod::#name::apply_bounds)(&*__garde_binding, #args) {
+                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
                             __garde_report.append(__garde_path(), __garde_error);
                         }
                     }
@@ -334,7 +334,7 @@ impl ToTokens for Rules<'_> {
                 | LengthGraphemes(_)
                 | LengthUtf16(_) => {
                     quote! {
-                        if let Err(__garde_error) = (#rules_mod::#name::apply_bounds)(&*__garde_binding, #args) {
+                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
                             __garde_report.append(__garde_path(), __garde_error);
                         }
                     }

@@ -3,7 +3,7 @@
 //! ```rust
 //! #[derive(garde::Validate)]
 //! struct Test {
-//!     #[garde(length(min=1, max=100))]
+//!     #[garde(length(1..=100))]
 //!     v: String,
 //! }
 //! ```
@@ -20,8 +20,8 @@
 //! #[derive(garde::Validate)]
 //! struct Test {
 //!     #[garde(
-//!         length(graphemes, min=1, max=25),
-//!         length(bytes, min=1, max=100),
+//!         length(graphemes, 1..=25),
+//!         length(bytes, 1..=100),
 //!     )]
 //!     v: String,
 //! }

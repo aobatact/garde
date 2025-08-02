@@ -1,4 +1,4 @@
-use garde::{Validate, Error, ErrorCode, StandardErrorCode};
+use garde::{Validate, ErrorCode, StandardErrorCode};
 
 #[derive(Validate)]
 struct TestErrorCodes {

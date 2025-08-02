@@ -127,7 +127,7 @@ impl ToTokens for Struct<'_> {
         Fields::new(
             self.fields
                 .iter()
-                .map(|(key, field)| (Binding::Ident(key), field, key.to_string())),
+                .map(|(key, field)| (Binding::Ident(key), field, field.alias.as_ref().unwrap_or(&key.to_string()).clone())),
             |key, value| match self.is_transparent {
                 true => quote! {{
                     #value

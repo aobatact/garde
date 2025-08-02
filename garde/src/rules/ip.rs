@@ -15,11 +15,24 @@
 use std::fmt::Display;
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, StandardErrorCode};
 
 pub fn apply<T: Ip>(v: &T, (kind,): (IpKind,)) -> Result<(), Error> {
     if v.validate_ip(kind).is_err() {
-        return Err(Error::new(format!("not a valid {kind} address")));
+        return Err(Error::with_code(
+            format!("not a valid {kind} address"),
+            StandardErrorCode::IpInvalid,
+        ));
+    }
+    Ok(())
+}
+
+pub fn apply_with_code<T: Ip>(v: &T, (kind,): (IpKind,), code: &str) -> Result<(), Error> {
+    if v.validate_ip(kind).is_err() {
+        return Err(Error::with_custom_code(
+            format!("not a valid {kind} address"),
+            code,
+        ));
     }
     Ok(())
 }

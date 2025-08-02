@@ -7,6 +7,10 @@ pub fn apply<T: Utf16CodeUnits<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> R
     v.validate_num_code_units(range)
 }
 
+pub fn apply_with_code<T: HasUtf16CodeUnits, R: RangeBounds<usize>>(v: &T, range: &R, code: &str) -> Result<(), Error> {
+    super::apply_with_code(v.num_code_units(), range, code)
+}
+
 pub trait Utf16CodeUnits<R: RangeBounds<usize>> {
     fn validate_num_code_units(&self, range: &R) -> Result<(), Error>;
 }

@@ -46,14 +46,24 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, StandardErrorCode};
 
 pub fn apply<T: Pattern, M: Matcher>(v: &T, (pat,): (&M,)) -> Result<(), Error> {
     if !v.validate_pattern(pat) {
-        return Err(Error::new(format!(
-            "does not match pattern /{}/",
-            pat.as_str()
-        )));
+        return Err(Error::with_code(
+            format!("does not match pattern /{}/", pat.as_str()),
+            StandardErrorCode::PatternMismatch,
+        ));
+    }
+    Ok(())
+}
+
+pub fn apply_with_code<T: Pattern, M: Matcher>(v: &T, (pat,): (&M,), code: &str) -> Result<(), Error> {
+    if !v.validate_pattern(pat) {
+        return Err(Error::with_custom_code(
+            format!("does not match pattern /{}/", pat.as_str()),
+            code,
+        ));
     }
     Ok(())
 }

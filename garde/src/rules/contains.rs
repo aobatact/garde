@@ -17,11 +17,24 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, StandardErrorCode};
 
 pub fn apply<T: Contains>(v: &T, (pat,): (&str,)) -> Result<(), Error> {
     if !v.validate_contains(pat) {
-        return Err(Error::new(format!("does not contain \"{pat}\"")));
+        return Err(Error::with_code(
+            format!("does not contain \"{pat}\""),
+            StandardErrorCode::ContainsNotFound,
+        ));
+    }
+    Ok(())
+}
+
+pub fn apply_with_code<T: Contains>(v: &T, (pat,): (&str,), code: &str) -> Result<(), Error> {
+    if !v.validate_contains(pat) {
+        return Err(Error::with_custom_code(
+            format!("does not contain \"{pat}\""),
+            code,
+        ));
     }
     Ok(())
 }

@@ -9,6 +9,10 @@ pub fn apply<T: Chars<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(),
     v.validate_num_chars(range)
 }
 
+pub fn apply_with_code<T: HasChars, R: RangeBounds<usize>>(v: &T, range: &R, code: &str) -> Result<(), Error> {
+    super::apply_with_code(v.num_chars(), range, code)
+}
+
 pub trait Chars<R: RangeBounds<usize>> {
     fn validate_num_chars(&self, range: &R) -> Result<(), Error>;
 }

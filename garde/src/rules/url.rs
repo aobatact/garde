@@ -18,11 +18,24 @@
 use std::fmt::Display;
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, StandardErrorCode};
 
 pub fn apply<T: Url>(v: &T, _: ()) -> Result<(), Error> {
     if let Err(e) = v.validate_url() {
-        return Err(Error::new(format!("not a valid url: {e}")));
+        return Err(Error::with_code(
+            format!("not a valid url: {e}"),
+            StandardErrorCode::UrlInvalid,
+        ));
+    }
+    Ok(())
+}
+
+pub fn apply_with_code<T: Url>(v: &T, _: (), code: &str) -> Result<(), Error> {
+    if let Err(e) = v.validate_url() {
+        return Err(Error::with_custom_code(
+            format!("not a valid url: {e}"),
+            code,
+        ));
     }
     Ok(())
 }

@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 use super::pattern::Matcher;
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, StandardErrorCode};
 
 macro_rules! init_regex {
     ($var:ident => $p:literal) => {
@@ -33,7 +33,20 @@ macro_rules! init_regex {
 
 pub fn apply<T: Email>(v: &T, _: ()) -> Result<(), Error> {
     if let Err(e) = v.validate_email() {
-        return Err(Error::new(format!("not a valid email: {e}")));
+        return Err(Error::with_code(
+            format!("not a valid email: {e}"),
+            StandardErrorCode::EmailInvalid,
+        ));
+    }
+    Ok(())
+}
+
+pub fn apply_with_code<T: Email>(v: &T, _: (), code: &str) -> Result<(), Error> {
+    if let Err(e) = v.validate_email() {
+        return Err(Error::with_custom_code(
+            format!("not a valid email: {e}"),
+            code,
+        ));
     }
     Ok(())
 }

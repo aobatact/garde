@@ -17,11 +17,24 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, StandardErrorCode};
 
 pub fn apply<T: Prefix>(v: &T, (pat,): (&str,)) -> Result<(), Error> {
     if !v.validate_prefix(pat) {
-        return Err(Error::new(format!("value does not begin with \"{pat}\"")));
+        return Err(Error::with_code(
+            format!("value does not begin with \"{pat}\""),
+            StandardErrorCode::PrefixMismatch,
+        ));
+    }
+    Ok(())
+}
+
+pub fn apply_with_code<T: Prefix>(v: &T, (pat,): (&str,), code: &str) -> Result<(), Error> {
+    if !v.validate_prefix(pat) {
+        return Err(Error::with_custom_code(
+            format!("value does not begin with \"{pat}\""),
+            code,
+        ));
     }
     Ok(())
 }

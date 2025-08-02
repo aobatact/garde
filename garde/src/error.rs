@@ -67,21 +67,108 @@ impl std::fmt::Display for Report {
 
 impl std::error::Error for Report {}
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum StandardErrorCode {
+    Unknown = 0,
+
+    // Basic validation (G001-G099)
+    Required = 1,
+    LengthMin = 10,
+    LengthMax = 11,
+
+    // Numeric validation (G100-G199)
+    RangeLower = 100,
+    RangeUpper = 101,
+    RangeExcludedLower = 102,
+    RangeExcludedUpper = 103,
+
+    // Pattern validation (G200-G299)
+    EmailInvalid = 200,
+    UrlInvalid = 201,
+    IpInvalid = 202,
+    PatternMismatch = 210,
+    CreditCardInvalid = 220,
+    PhoneNumberInvalid = 230,
+    NotAscii = 240,
+    NotAlphanumeric = 241,
+
+    // Container validation (G300-G399)
+    ContainsNotFound = 300,
+    PrefixMismatch = 310,
+    SuffixMismatch = 311,
+    FieldMismatch = 320,
+}
+
+impl Default for StandardErrorCode {
+    fn default() -> Self {
+        StandardErrorCode::Unknown
+    }
+}
+
+impl std::fmt::Display for StandardErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "G{:03}", *self as u16)
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub enum ErrorCode {
+    Standard(StandardErrorCode),
+    Custom(CompactString),
+}
+
+impl Default for ErrorCode {
+    fn default() -> Self {
+        ErrorCode::Standard(StandardErrorCode::Unknown)
+    }
+}
+
+impl std::fmt::Display for ErrorCode {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            ErrorCode::Standard(s) => write!(f, "{}", s),
+            ErrorCode::Custom(c) => write!(f, "{}", c),
+        }
+    }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Error {
     message: CompactString,
+    code: ErrorCode,
 }
 
 impl Error {
     pub fn new(message: impl ToCompactString) -> Self {
         Self {
             message: message.to_compact_string(),
+            code: ErrorCode::default(),
+        }
+    }
+
+    pub fn with_code(message: impl ToCompactString, code: StandardErrorCode) -> Self {
+        Self {
+            message: message.to_compact_string(),
+            code: ErrorCode::Standard(code),
+        }
+    }
+
+    pub fn with_custom_code(message: impl ToCompactString, code: impl ToCompactString) -> Self {
+        Self {
+            message: message.to_compact_string(),
+            code: ErrorCode::Custom(code.to_compact_string()),
         }
     }
 
     pub fn message(&self) -> &str {
         self.message.as_ref()
+    }
+
+    pub fn code(&self) -> &ErrorCode {
+        &self.code
     }
 }
 
@@ -283,6 +370,28 @@ mod tests {
         assert_eq!(path.to_string(), "a.b.c");
     }
 
+    #[test]
+    fn error_codes() {
+        // Test default error code
+        let err = Error::new("test error");
+        assert_eq!(err.code(), &ErrorCode::Standard(StandardErrorCode::Unknown));
+        assert_eq!(err.code().to_string(), "G000");
+
+        // Test standard error code
+        let err = Error::with_code("email error", StandardErrorCode::EmailInvalid);
+        assert_eq!(err.code(), &ErrorCode::Standard(StandardErrorCode::EmailInvalid));
+        assert_eq!(err.code().to_string(), "G200");
+
+        // Test custom error code
+        let err = Error::with_custom_code("custom error", "APP_CUSTOM_001");
+        match err.code() {
+            ErrorCode::Custom(code) => assert_eq!(code.as_str(), "APP_CUSTOM_001"),
+            _ => panic!("Expected custom error code"),
+        }
+        assert_eq!(err.code().to_string(), "APP_CUSTOM_001");
+    }
+
+    #[cfg(feature = "derive")]
     #[test]
     fn report_select() {
         let mut report = Report::new();

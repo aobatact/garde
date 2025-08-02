@@ -4,7 +4,7 @@ pub mod error;
 pub mod rules;
 pub mod validate;
 
-pub use error::{Error, Path, Report};
+pub use error::{Error, ErrorCode, Path, Report, StandardErrorCode};
 #[cfg(feature = "derive")]
 pub use garde_derive::{select, Validate};
 pub use validate::{Unvalidated, Valid, Validate};

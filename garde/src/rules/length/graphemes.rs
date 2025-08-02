@@ -9,6 +9,10 @@ pub fn apply<T: Graphemes<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result
     v.validate_num_graphemes(range)
 }
 
+pub fn apply_with_code<T: HasGraphemes, R: RangeBounds<usize>>(v: &T, range: &R, code: &str) -> Result<(), Error> {
+    super::apply_with_code(v.num_graphemes(), range, code)
+}
+
 pub trait Graphemes<R: RangeBounds<usize>> {
     fn validate_num_graphemes(&self, range: &R) -> Result<(), Error>;
 }

@@ -171,6 +171,7 @@ impl ToTokens for Tuple<'_> {
 struct Inner<'a> {
     rules_mod: &'a TokenStream2,
     rule_set: &'a model::RuleSet,
+    field: &'a model::ValidateField,
 }
 
 impl ToTokens for Inner<'_> {
@@ -178,6 +179,7 @@ impl ToTokens for Inner<'_> {
         let Inner {
             rules_mod,
             rule_set,
+            field,
         } = self;
 
         let outer = match rule_set.has_top_level_rules() {
@@ -185,6 +187,7 @@ impl ToTokens for Inner<'_> {
                 let rules = Rules {
                     rules_mod,
                     rule_set,
+                    field,
                 };
                 Some(quote! {#rules})
             }
@@ -193,6 +196,7 @@ impl ToTokens for Inner<'_> {
         let inner = rule_set.inner.as_deref().map(|rule_set| Inner {
             rules_mod,
             rule_set,
+            field,
         });
 
         let value = match (outer, inner) {
@@ -223,6 +227,7 @@ impl ToTokens for Inner<'_> {
 struct Rules<'a> {
     rules_mod: &'a TokenStream2,
     rule_set: &'a model::RuleSet,
+    field: &'a model::ValidateField,
 }
 
 #[derive(Clone, Copy)]
@@ -245,6 +250,7 @@ impl ToTokens for Rules<'_> {
         let Rules {
             rules_mod,
             rule_set,
+            field,
         } = self;
 
         for custom_rule in rule_set.custom_rules.iter() {
@@ -320,29 +326,61 @@ impl ToTokens for Rules<'_> {
                 },
             };
 
-            let function_call = match rule {
-                Range(_) => {
-                    quote! {
-                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
-                            __garde_report.append(__garde_path(), __garde_error);
+            let function_call = if let Some(custom_code) = &field.code {
+                // Use apply_with_code variant with custom error code
+                match rule {
+                    Range(_) => {
+                        quote! {
+                            if let Err(__garde_error) = (#rules_mod::#name::apply_with_code)(&*__garde_binding, #args, #custom_code) {
+                                __garde_report.append(__garde_path(), __garde_error);
+                            }
+                        }
+                    }
+                    LengthSimple(_)
+                    | LengthBytes(_)
+                    | LengthChars(_)
+                    | LengthGraphemes(_)
+                    | LengthUtf16(_) => {
+                        quote! {
+                            if let Err(__garde_error) = (#rules_mod::#name::apply_with_code)(&*__garde_binding, #args, #custom_code) {
+                                __garde_report.append(__garde_path(), __garde_error);
+                            }
+                        }
+                    }
+                    _ => {
+                        quote! {
+                            if let Err(__garde_error) = (#rules_mod::#name::apply_with_code)(&*__garde_binding, #args, #custom_code) {
+                                __garde_report.append(__garde_path(), __garde_error);
+                            }
                         }
                     }
                 }
-                LengthSimple(_)
-                | LengthBytes(_)
-                | LengthChars(_)
-                | LengthGraphemes(_)
-                | LengthUtf16(_) => {
-                    quote! {
-                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
-                            __garde_report.append(__garde_path(), __garde_error);
+            } else {
+                // Use regular apply variant with standard error code
+                match rule {
+                    Range(_) => {
+                        quote! {
+                            if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                                __garde_report.append(__garde_path(), __garde_error);
+                            }
                         }
                     }
-                }
-                _ => {
-                    quote! {
-                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
-                            __garde_report.append(__garde_path(), __garde_error);
+                    LengthSimple(_)
+                    | LengthBytes(_)
+                    | LengthChars(_)
+                    | LengthGraphemes(_)
+                    | LengthUtf16(_) => {
+                        quote! {
+                            if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                                __garde_report.append(__garde_path(), __garde_error);
+                            }
+                        }
+                    }
+                    _ => {
+                        quote! {
+                            if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                                __garde_report.append(__garde_path(), __garde_error);
+                            }
                         }
                     }
                 }
@@ -386,6 +424,7 @@ where
             let rules = Rules {
                 rules_mod,
                 rule_set: &field.rule_set,
+                field,
             };
             let outer = match field.has_top_level_rules() {
                 true => Some(quote! {{#rules}}),
@@ -412,6 +451,7 @@ where
                     Inner {
                         rules_mod,
                         rule_set: inner,
+                        field,
                     }
                     .to_token_stream(),
                 ),
@@ -426,6 +466,7 @@ where
                 let cond_rules = Rules {
                     rules_mod,
                     rule_set: &cond_rule_set.rule_set,
+                    field,
                 };
                 quote! {
                     if #condition {

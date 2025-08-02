@@ -14,11 +14,24 @@
 //!
 //! This trait has a blanket implementation for all `T: PartialEq<O>, O`.
 
-use crate::Error;
+use crate::error::{Error, StandardErrorCode};
 
 pub fn apply<T: Matches<O>, O>(v: &T, (field, value): (&str, &O)) -> Result<(), Error> {
     if !v.validate_matches(value) {
-        return Err(Error::new(format!("does not match {field} field")));
+        return Err(Error::with_code(
+            format!("does not match {field} field"),
+            StandardErrorCode::FieldMismatch,
+        ));
+    }
+    Ok(())
+}
+
+pub fn apply_with_code<T: Matches<O>, O>(v: &T, (field, value): (&str, &O), code: &str) -> Result<(), Error> {
+    if !v.validate_matches(value) {
+        return Err(Error::with_custom_code(
+            format!("does not match {field} field"),
+            code,
+        ));
     }
     Ok(())
 }

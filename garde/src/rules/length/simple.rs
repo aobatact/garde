@@ -10,6 +10,10 @@ pub fn apply<T: Simple<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<()
     v.validate_length(range)
 }
 
+pub fn apply_with_code<T: HasSimpleLength, R: RangeBounds<usize>>(v: &T, range: &R, code: &str) -> Result<(), Error> {
+    super::apply_with_code(v.length(), range, code)
+}
+
 pub trait Simple<R: RangeBounds<usize>> {
     fn validate_length(&self, range: &R) -> Result<(), Error>;
 }

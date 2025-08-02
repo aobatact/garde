@@ -9,6 +9,10 @@ pub fn apply<T: Bytes<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(),
     v.validate_num_bytes(range)
 }
 
+pub fn apply_with_code<T: HasBytes, R: RangeBounds<usize>>(v: &T, range: &R, code: &str) -> Result<(), Error> {
+    super::apply_with_code(v.num_bytes(), range, code)
+}
+
 pub trait Bytes<R: RangeBounds<usize>> {
     fn validate_num_bytes(&self, range: &R) -> Result<(), Error>;
 }

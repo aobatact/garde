@@ -59,7 +59,7 @@ pub use simple::HasSimpleLength;
 pub mod utf16;
 pub use utf16::HasUtf16CodeUnits;
 
-use crate::error::Error;
+use crate::error::{Error, StandardErrorCode};
 use std::ops::RangeBounds;
 
 pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> {
@@ -68,12 +68,18 @@ pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> 
     match range.start_bound() {
         Bound::Included(&min) => {
             if len < min {
-                return Err(Error::new(format!("length is lower than {min}")));
+                return Err(Error::with_code(
+                    format!("length is lower than {min}"),
+                    StandardErrorCode::LengthMin,
+                ));
             }
         }
         Bound::Excluded(&min) => {
             if len <= min {
-                return Err(Error::new(format!("length is lower than or equal to {min}")));
+                return Err(Error::with_code(
+                    format!("length is lower than or equal to {min}"),
+                    StandardErrorCode::LengthMin,
+                ));
             }
         }
         Bound::Unbounded => {}
@@ -82,12 +88,64 @@ pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> 
     match range.end_bound() {
         Bound::Included(&max) => {
             if len > max {
-                return Err(Error::new(format!("length is greater than {max}")));
+                return Err(Error::with_code(
+                    format!("length is greater than {max}"),
+                    StandardErrorCode::LengthMax,
+                ));
             }
         }
         Bound::Excluded(&max) => {
             if len >= max {
-                return Err(Error::new(format!("length is greater than or equal to {max}")));
+                return Err(Error::with_code(
+                    format!("length is greater than or equal to {max}"),
+                    StandardErrorCode::LengthMax,
+                ));
+            }
+        }
+        Bound::Unbounded => {}
+    };
+
+    Ok(())
+}
+
+pub fn apply_with_code<R: RangeBounds<usize>>(len: usize, range: &R, code: &str) -> Result<(), Error> {
+    use std::ops::Bound;
+
+    match range.start_bound() {
+        Bound::Included(&min) => {
+            if len < min {
+                return Err(Error::with_custom_code(
+                    format!("length is lower than {min}"),
+                    code,
+                ));
+            }
+        }
+        Bound::Excluded(&min) => {
+            if len <= min {
+                return Err(Error::with_custom_code(
+                    format!("length is lower than or equal to {min}"),
+                    code,
+                ));
+            }
+        }
+        Bound::Unbounded => {}
+    };
+
+    match range.end_bound() {
+        Bound::Included(&max) => {
+            if len > max {
+                return Err(Error::with_custom_code(
+                    format!("length is greater than {max}"),
+                    code,
+                ));
+            }
+        }
+        Bound::Excluded(&max) => {
+            if len >= max {
+                return Err(Error::with_custom_code(
+                    format!("length is greater than or equal to {max}"),
+                    code,
+                ));
             }
         }
         Bound::Unbounded => {}

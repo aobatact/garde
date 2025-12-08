@@ -4,7 +4,7 @@ use super::util;
 struct SimpleConditional {
     #[garde(skip)]
     validate_username: bool,
-    #[garde(if(cond = self.validate_username, ascii, length(min = 3)))]
+    #[garde(if(cond = self.validate_username, ascii, length(3..)))]
     username: String,
 }
 
@@ -45,7 +45,7 @@ fn simple_conditional_invalid_when_true() {
 #[derive(Debug, garde::Validate)]
 #[garde(context(ValidationContext as ctx))]
 struct WithContext {
-    #[garde(if(cond = ctx.strict_mode, length(min = 8), alphanumeric))]
+    #[garde(if(cond = ctx.strict_mode, length(8..), alphanumeric))]
     password: String,
 
     #[garde(if(cond = self.email_required, email, required))]
@@ -107,7 +107,7 @@ struct MultipleConditions {
 
     #[garde(
         if(cond = self.check_format, ascii),
-        if(cond = self.check_length, length(min = 5, max = 20)),
+        if(cond = self.check_length, length(5..=20)),
         required  // Unconditional rule
     )]
     value: Option<String>,
@@ -158,7 +158,7 @@ struct ComplexCondition {
     #[garde(skip)]
     is_active: bool,
 
-    #[garde(if(cond = self.is_admin && self.is_active, length(min = 16)))]
+    #[garde(if(cond = self.is_admin && self.is_active, length(16..)))]
     api_key: String,
 }
 

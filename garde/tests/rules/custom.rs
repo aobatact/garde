@@ -26,7 +26,7 @@ struct Test<'a> {
     })))]
     inner_b: &'a [&'a str],
 
-    #[garde(length(min = ctx.needle.len()))]
+    #[garde(length(ctx.needle.len()..))]
     uses_ctx: &'a str,
 }
 

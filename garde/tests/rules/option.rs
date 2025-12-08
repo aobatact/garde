@@ -6,7 +6,7 @@ struct Test<'a> {
     alphanumeric: Option<&'a str>,
     #[garde(ascii)]
     ascii: Option<&'a str>,
-    #[garde(length(min = 1))]
+    #[garde(length(1..))]
     length_min1_u8_slice: Option<&'a [u8]>,
     #[garde(contains("a"))]
     contains_a: Option<&'a str>,
@@ -16,7 +16,7 @@ struct Test<'a> {
     email: Option<&'a str>,
     #[garde(ip)]
     ip: Option<&'a str>,
-    #[garde(length(min = 1))]
+    #[garde(length(1..))]
     length_min1: Option<&'a str>,
     #[garde(matches(length_min1))]
     matches: Option<&'a str>,
@@ -26,7 +26,7 @@ struct Test<'a> {
     phone_number: Option<&'a str>,
     #[garde(prefix("a"))]
     prefix_a: Option<&'a str>,
-    #[garde(range(min = 1))]
+    #[garde(range(1..))]
     range_min1: Option<i32>,
     #[garde(required)]
     required: Option<&'a str>,

@@ -1,0 +1,15 @@
+---
+source: garde/tests/range_bounds_test.rs
+assertion_line: 24
+expression: snapshot
+---
+Test {
+    field: 5,
+}
+field: lower than 10
+
+
+Test {
+    field: 150,
+}
+field: greater than 100

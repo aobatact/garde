@@ -2,9 +2,9 @@ use super::util;
 
 #[derive(Debug, garde::Validate)]
 struct Test<'a> {
-    #[garde(length(min = 10, max = 100))]
+    #[garde(length(10..=100))]
     field: &'a str,
-    #[garde(inner(length(min = 10, max = 100)))]
+    #[garde(inner(length(10..=100)))]
     inner: &'a [&'a str],
 }
 
@@ -42,9 +42,9 @@ fn length_invalid() {
 
 #[derive(Debug, garde::Validate)]
 struct Exact<'a> {
-    #[garde(length(equal = 2))]
+    #[garde(length(2..=2))]
     field: &'a str,
-    #[garde(inner(length(equal = 2)))]
+    #[garde(inner(length(2..=2)))]
     inner: &'a [&'a str],
 }
 
@@ -85,9 +85,9 @@ fn exact_length_invalid() {
 
 #[derive(Debug, garde::Validate)]
 struct MinMaxEqual<'a> {
-    #[garde(length(min = 2, max = 2))]
+    #[garde(length(2..=2))]
     min_max: &'a str,
-    #[garde(length(equal = 2))]
+    #[garde(length(2..=2))]
     equal: &'a str,
 }
 
@@ -128,18 +128,18 @@ fn min_max_equal_length_invalid() {
 
 #[derive(Debug, garde::Validate)]
 struct SpecialLengthTest<'a> {
-    #[garde(length(simple, max = 1))]
+    #[garde(length(simple, ..=1))]
     simple: &'a str,
-    #[garde(length(bytes, max = 1))]
+    #[garde(length(bytes, ..=1))]
     bytes: &'a str,
-    #[garde(length(chars, max = 1))]
+    #[garde(length(chars, ..=1))]
     chars: &'a str,
-    #[garde(length(graphemes, max = 1))]
+    #[garde(length(graphemes, ..=1))]
     graphemes: &'a str,
-    #[garde(length(utf16, max = 1))]
+    #[garde(length(utf16, ..=1))]
     utf16: &'a str,
 
-    #[garde(length(bytes, max = 4), length(graphemes, max = 1))]
+    #[garde(length(bytes, ..=4), length(graphemes, ..=1))]
     multi: &'a str,
 }
 

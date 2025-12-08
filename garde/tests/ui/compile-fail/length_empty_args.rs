@@ -2,7 +2,7 @@
 
 #[derive(garde::Validate)]
 struct Test<'a> {
-    #[garde(length(min = 100, max = 10))]
+    #[garde(length())]  // Empty range - invalid
     field: &'a str,
 }
 

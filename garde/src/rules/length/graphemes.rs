@@ -3,25 +3,29 @@
 //! `garde` implementations of this trait use the [unicode-segmentation](https://crates.io/crates/unicode-segmentation) crate.
 
 use crate::error::Error;
+use std::ops::RangeBounds;
 
-pub fn apply<T: Graphemes>(v: &T, (min, max): (usize, usize)) -> Result<(), Error> {
-    v.validate_num_graphemes(min, max)
+pub fn apply<T: Graphemes<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+    v.validate_num_graphemes(range)
 }
 
-pub trait Graphemes {
-    fn validate_num_graphemes(&self, min: usize, max: usize) -> Result<(), Error>;
+pub trait Graphemes<R: RangeBounds<usize>> {
+    fn validate_num_graphemes(&self, range: &R) -> Result<(), Error>;
 }
 
-impl<T: HasGraphemes> Graphemes for T {
-    fn validate_num_graphemes(&self, min: usize, max: usize) -> Result<(), Error> {
-        super::check_len(self.num_graphemes(), min, max)
+impl<T: HasGraphemes, R: RangeBounds<usize>> Graphemes<R> for T {
+    fn validate_num_graphemes(&self, range: &R) -> Result<(), Error> {
+        super::apply(self.num_graphemes(), range)
     }
 }
 
-impl<T: Graphemes> Graphemes for Option<T> {
-    fn validate_num_graphemes(&self, min: usize, max: usize) -> Result<(), Error> {
+impl<T, R: RangeBounds<usize>> Graphemes<R> for Option<T>
+where
+    T: Graphemes<R>,
+{
+    fn validate_num_graphemes(&self, range: &R) -> Result<(), Error> {
         match self {
-            Some(v) => v.validate_num_graphemes(min, max),
+            Some(v) => v.validate_num_graphemes(range),
             None => Ok(()),
         }
     }

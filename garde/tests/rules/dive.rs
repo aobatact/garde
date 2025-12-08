@@ -5,7 +5,7 @@ use super::util;
 
 #[derive(Clone, Copy, Debug, garde::Validate)]
 struct Inner<'a> {
-    #[garde(length(min = 1))]
+    #[garde(length(1..))]
     field: &'a str,
 }
 

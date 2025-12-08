@@ -3,7 +3,7 @@
 //! ```rust
 //! #[derive(garde::Validate)]
 //! struct Test {
-//!     #[garde(inner(length(min=1)))]
+//!     #[garde(inner(length(1..)))]
 //!     v: Vec<String>,
 //! }
 //! ```

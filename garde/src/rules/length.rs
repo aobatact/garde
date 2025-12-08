@@ -3,7 +3,7 @@
 //! ```rust
 //! #[derive(garde::Validate)]
 //! struct Test {
-//!     #[garde(length(min=1, max=100))]
+//!     #[garde(length(1..=100))]
 //!     v: String,
 //! }
 //! ```
@@ -20,8 +20,8 @@
 //! #[derive(garde::Validate)]
 //! struct Test {
 //!     #[garde(
-//!         length(graphemes, min=1, max=25),
-//!         length(bytes, min=1, max=100),
+//!         length(graphemes, 1..=25),
+//!         length(bytes, 1..=100),
 //!     )]
 //!     v: String,
 //! }
@@ -60,13 +60,38 @@ pub mod utf16;
 pub use utf16::HasUtf16CodeUnits;
 
 use crate::error::Error;
+use std::ops::RangeBounds;
 
-fn check_len(len: usize, min: usize, max: usize) -> Result<(), Error> {
-    if len < min {
-        Err(Error::new(format!("length is lower than {min}")))
-    } else if len > max {
-        Err(Error::new(format!("length is greater than {max}")))
-    } else {
-        Ok(())
-    }
+pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> {
+    use std::ops::Bound;
+
+    match range.start_bound() {
+        Bound::Included(&min) => {
+            if len < min {
+                return Err(Error::new(format!("length is lower than {min}")));
+            }
+        }
+        Bound::Excluded(&min) => {
+            if len <= min {
+                return Err(Error::new(format!("length is lower than or equal to {min}")));
+            }
+        }
+        Bound::Unbounded => {}
+    };
+
+    match range.end_bound() {
+        Bound::Included(&max) => {
+            if len > max {
+                return Err(Error::new(format!("length is greater than {max}")));
+            }
+        }
+        Bound::Excluded(&max) => {
+            if len >= max {
+                return Err(Error::new(format!("length is greater than or equal to {max}")));
+            }
+        }
+        Bound::Unbounded => {}
+    };
+
+    Ok(())
 }

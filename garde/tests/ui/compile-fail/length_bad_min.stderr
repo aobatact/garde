@@ -1,5 +1,0 @@
-error: `min` must be lower than or equal to `max`
- --> tests/ui/compile-fail/length_bad_min.rs
-  |
-  |     #[garde(length(min = 100, max = 10))]
-  |                    ^^^

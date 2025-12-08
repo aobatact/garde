@@ -27,7 +27,7 @@ impl garde::rules::length::HasSimpleLength for MyString {
 
 #[derive(garde::Validate)]
 struct Foo {
-    #[garde(length(min = 1, max = 1000))]
+    #[garde(length(1..=1000))]
     field: MyString,
 }
 
@@ -58,7 +58,7 @@ struct Bar {
 
 #[derive(garde::Validate)]
 struct Baz {
-    #[garde(range(min = 1, max = 10))]
+    #[garde(range(1..=10))]
     value: u32,
 }
 

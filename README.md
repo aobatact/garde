@@ -322,7 +322,7 @@ fn is_strong_password(value: &str, context: &PasswordContext) -> garde::Result {
         .map(|e| e.mask_entropy)
         .unwrap_or(0.0);
     if bits < context.min_entropy {
-        return Err(garde::Error::new("password is not strong enough"));
+        return Err(garde::Error::custom("password is not strong enough"));
     }
     Ok(())
 }
@@ -348,7 +348,7 @@ That means it's possible to use higher order functions:
 fn my_equals(other: &str) -> impl FnOnce(&str, &()) -> garde::Result + '_ {
     move |value, _| {
         if value != other {
-            return Err(garde::Error::new(format!("not equal to {other}")));
+            return Err(garde::Error::custom(format!("not equal to {other}")));
         }
 
         Ok(())
@@ -548,7 +548,7 @@ mod my_str_adapter {
             // re-implement `simple`, but _only_ for the concrete type &str!
             pub fn apply<R: std::ops::RangeBounds<usize>>(v: &str, range: &R) -> garde::Result {
                 if !range.contains(&v.len()) {
-                    Err(garde::Error::new("my custom error message"))
+                    Err(garde::Error::custom("my custom error message"))
                 } else {
                     Ok(())
                 }

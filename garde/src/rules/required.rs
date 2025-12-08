@@ -1,8 +1,8 @@
-use crate::{Error, Result};
+use crate::error::{Error, ErrorKind};
 
-pub fn apply<T: Required>(v: &T, _: ()) -> Result {
+pub fn apply<T: Required>(v: &T, _: ()) -> Result<(), Error> {
     if !v.is_set() {
-        return Err(Error::new("not set"));
+        return Err(Error::from_kind(ErrorKind::Required));
     }
     Ok(())
 }

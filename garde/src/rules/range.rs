@@ -15,7 +15,7 @@
 use std::fmt::Display;
 use std::ops::RangeBounds;
 
-use crate::error::Error;
+use crate::error::{Error, ErrorKind, RangeBound};
 
 // Main apply function that works with the trait
 #[inline]
@@ -40,12 +40,18 @@ impl<T: PartialOrd + Display, R: RangeBounds<T>> RangeValidatable<T, R> for T {
         match range.start_bound() {
             Bound::Included(val) => {
                 if self < val {
-                    return Err(Error::new(format!("lower than {val}")));
+                    return Err(Error::from_kind(ErrorKind::RangeTooLow {
+                        min: RangeBound::Inclusive(val.to_string().into()),
+                        actual: self.to_string().into(),
+                    }));
                 }
             }
             Bound::Excluded(val) => {
                 if self <= val {
-                    return Err(Error::new(format!("lower than or equal to {val}")));
+                    return Err(Error::from_kind(ErrorKind::RangeTooLow {
+                        min: RangeBound::Exclusive(val.to_string().into()),
+                        actual: self.to_string().into(),
+                    }));
                 }
             }
             Bound::Unbounded => {}
@@ -54,12 +60,18 @@ impl<T: PartialOrd + Display, R: RangeBounds<T>> RangeValidatable<T, R> for T {
         match range.end_bound() {
             Bound::Included(val) => {
                 if self > val {
-                    return Err(Error::new(format!("greater than {val}")));
+                    return Err(Error::from_kind(ErrorKind::RangeTooHigh {
+                        max: RangeBound::Inclusive(val.to_string().into()),
+                        actual: self.to_string().into(),
+                    }));
                 }
             }
             Bound::Excluded(val) => {
                 if self >= val {
-                    return Err(Error::new(format!("greater than or equal to {val}")));
+                    return Err(Error::from_kind(ErrorKind::RangeTooHigh {
+                        max: RangeBound::Exclusive(val.to_string().into()),
+                        actual: self.to_string().into(),
+                    }));
                 }
             }
             Bound::Unbounded => {}

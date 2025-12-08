@@ -13,11 +13,11 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: Ascii>(v: &T, _: ()) -> Result<(), Error> {
     if !v.validate_ascii() {
-        return Err(Error::new("not ascii"));
+        return Err(Error::from_kind(ErrorKind::NotAscii));
     }
     Ok(())
 }

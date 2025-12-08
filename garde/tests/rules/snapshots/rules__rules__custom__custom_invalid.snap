@@ -13,10 +13,8 @@ Test {
     ],
     uses_ctx: "",
 }
-a: not equal to test
-b: `b` is not equal to test
-inner_a[0]: not equal to test
-inner_b[0]: `b` is not equal to test
+a: validation failed: not equal to test
+b: validation failed: `b` is not equal to test
+inner_a[0]: validation failed: not equal to test
+inner_b[0]: validation failed: `b` is not equal to test
 uses_ctx: length is lower than 4
-
-

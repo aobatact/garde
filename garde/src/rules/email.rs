@@ -17,7 +17,7 @@ use std::str::FromStr;
 
 use super::pattern::Matcher;
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{EmailErrorReason, Error, ErrorKind};
 
 macro_rules! init_regex {
     ($var:ident => $p:literal) => {
@@ -31,9 +31,14 @@ macro_rules! init_regex {
     };
 }
 
-pub fn apply<T: Email>(v: &T, _: ()) -> Result<(), Error> {
+pub fn apply<T: Email>(v: &T, _: ()) -> Result<(), Error>
+where
+    T::Error: Into<EmailErrorReason>,
+{
     if let Err(e) = v.validate_email() {
-        return Err(Error::new(format!("not a valid email: {e}")));
+        return Err(Error::from_kind(ErrorKind::InvalidEmail {
+            reason: e.into(),
+        }));
     }
     Ok(())
 }
@@ -86,6 +91,19 @@ impl Display for InvalidEmail {
                 write!(f, "domain length exceeded maximum of 255 characters")
             }
             InvalidEmail::InvalidDomain => write!(f, "domain contains unexpected characters"),
+        }
+    }
+}
+
+impl From<InvalidEmail> for EmailErrorReason {
+    fn from(e: InvalidEmail) -> Self {
+        match e {
+            InvalidEmail::Empty => EmailErrorReason::Empty,
+            InvalidEmail::MissingAt => EmailErrorReason::MissingAt,
+            InvalidEmail::UserLengthExceeded => EmailErrorReason::UserLengthExceeded,
+            InvalidEmail::InvalidUser => EmailErrorReason::InvalidUser,
+            InvalidEmail::DomainLengthExceeded => EmailErrorReason::DomainLengthExceeded,
+            InvalidEmail::InvalidDomain => EmailErrorReason::InvalidDomain,
         }
     }
 }

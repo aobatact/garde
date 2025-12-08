@@ -15,11 +15,14 @@
 use std::fmt::Display;
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
+
+// Re-export IpKind for use in generated code
+pub use crate::error::IpKind;
 
 pub fn apply<T: Ip>(v: &T, (kind,): (IpKind,)) -> Result<(), Error> {
     if v.validate_ip(kind).is_err() {
-        return Err(Error::new(format!("not a valid {kind} address")));
+        return Err(Error::from_kind(ErrorKind::InvalidIp { expected: kind }));
     }
     Ok(())
 }
@@ -28,23 +31,6 @@ pub trait Ip {
     type Error: Display;
 
     fn validate_ip(&self, kind: IpKind) -> Result<(), Self::Error>;
-}
-
-#[derive(Clone, Copy)]
-pub enum IpKind {
-    Any,
-    V4,
-    V6,
-}
-
-impl Display for IpKind {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            IpKind::Any => write!(f, "IP"),
-            IpKind::V4 => write!(f, "IPv4"),
-            IpKind::V6 => write!(f, "IPv6"),
-        }
-    }
 }
 
 impl<T: AsStr> Ip for T {

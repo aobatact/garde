@@ -16,13 +16,17 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: PhoneNumber>(v: &T, _: ()) -> Result<(), Error> {
     match v.validate_phone_number() {
         Ok(true) => Ok(()),
-        Ok(false) => Err(Error::new("not a valid phone number")),
-        Err(e) => Err(Error::new(format!("not a valid phone number: {e}"))),
+        Ok(false) => Err(Error::from_kind(ErrorKind::InvalidPhoneNumber {
+            reason: "invalid".into(),
+        })),
+        Err(e) => Err(Error::from_kind(ErrorKind::InvalidPhoneNumber {
+            reason: e.to_string().into(),
+        })),
     }
 }
 

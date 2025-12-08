@@ -18,11 +18,13 @@
 use std::fmt::Display;
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: Url>(v: &T, _: ()) -> Result<(), Error> {
     if let Err(e) = v.validate_url() {
-        return Err(Error::new(format!("not a valid url: {e}")));
+        return Err(Error::from_kind(ErrorKind::InvalidUrl {
+            reason: e.to_string().into(),
+        }));
     }
     Ok(())
 }

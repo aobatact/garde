@@ -2,4 +2,4 @@ error: unexpected token, expected `)`
  --> tests/ui/compile-fail/length_multiple_ranges.rs
   |
   |     #[garde(length(1.., 5..=10))]  // Multiple ranges - invalid
-  |                       ^
+  |                         ^

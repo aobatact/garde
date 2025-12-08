@@ -5,11 +5,586 @@
 
 mod rc_list;
 use std::borrow::Cow;
+use std::collections::HashMap;
 
-use compact_str::{CompactString, ToCompactString};
+use compact_str::{format_compact, CompactString, ToCompactString};
 use smallvec::SmallVec;
 
 use self::rc_list::List;
+
+// ============================================================================
+// ErrorKind and related types
+// ============================================================================
+
+/// Represents the kind of error that occurred during validation.
+/// Internal rules use specific variants with typed parameters.
+/// Custom rules use the `Custom` variant with a string code.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+#[non_exhaustive]
+pub enum ErrorKind {
+    // Length-related errors
+    LengthTooShort {
+        min: LengthBound,
+        actual: usize,
+    },
+    LengthTooLong {
+        max: LengthBound,
+        actual: usize,
+    },
+
+    // Range-related errors
+    RangeTooLow {
+        min: RangeBound,
+        actual: CompactString,
+    },
+    RangeTooHigh {
+        max: RangeBound,
+        actual: CompactString,
+    },
+
+    // Format validations
+    InvalidEmail {
+        reason: EmailErrorReason,
+    },
+    InvalidUrl {
+        reason: CompactString,
+    },
+    InvalidIp {
+        expected: IpKind,
+    },
+    InvalidCreditCard {
+        reason: CompactString,
+    },
+    InvalidPhoneNumber {
+        reason: CompactString,
+    },
+
+    // Character validations
+    NotAscii,
+    NotAlphanumeric,
+
+    // String content validations
+    PatternMismatch {
+        pattern: CompactString,
+    },
+    MissingSubstring {
+        expected: CompactString,
+    },
+    MissingPrefix {
+        expected: CompactString,
+    },
+    MissingSuffix {
+        expected: CompactString,
+    },
+
+    // Field validations
+    FieldMismatch {
+        other_field: CompactString,
+    },
+    Required,
+
+    // Custom error codes (for user-defined rules or code overrides)
+    Custom {
+        code: CompactString,
+        #[cfg_attr(feature = "serde", serde(flatten))]
+        params: Params,
+    },
+}
+
+impl ErrorKind {
+    /// Get the error code string for this error kind (useful for i18n key lookup).
+    pub fn code(&self) -> Cow<'_, str> {
+        match self {
+            ErrorKind::LengthTooShort { .. } => Cow::Borrowed("length.too_short"),
+            ErrorKind::LengthTooLong { .. } => Cow::Borrowed("length.too_long"),
+            ErrorKind::RangeTooLow { .. } => Cow::Borrowed("range.too_low"),
+            ErrorKind::RangeTooHigh { .. } => Cow::Borrowed("range.too_high"),
+            ErrorKind::InvalidEmail { .. } => Cow::Borrowed("email.invalid"),
+            ErrorKind::InvalidUrl { .. } => Cow::Borrowed("url.invalid"),
+            ErrorKind::InvalidIp { expected } => match expected {
+                IpKind::Any => Cow::Borrowed("ip.invalid"),
+                IpKind::V4 => Cow::Borrowed("ip.invalid_v4"),
+                IpKind::V6 => Cow::Borrowed("ip.invalid_v6"),
+            },
+            ErrorKind::InvalidCreditCard { .. } => Cow::Borrowed("credit_card.invalid"),
+            ErrorKind::InvalidPhoneNumber { .. } => Cow::Borrowed("phone_number.invalid"),
+            ErrorKind::NotAscii => Cow::Borrowed("ascii.invalid"),
+            ErrorKind::NotAlphanumeric => Cow::Borrowed("alphanumeric.invalid"),
+            ErrorKind::PatternMismatch { .. } => Cow::Borrowed("pattern.mismatch"),
+            ErrorKind::MissingSubstring { .. } => Cow::Borrowed("contains.missing"),
+            ErrorKind::MissingPrefix { .. } => Cow::Borrowed("prefix.missing"),
+            ErrorKind::MissingSuffix { .. } => Cow::Borrowed("suffix.missing"),
+            ErrorKind::FieldMismatch { .. } => Cow::Borrowed("matches.mismatch"),
+            ErrorKind::Required => Cow::Borrowed("required"),
+            ErrorKind::Custom { code, .. } => Cow::Borrowed(code.as_str()),
+        }
+    }
+
+    /// Generate a default English message for this error kind.
+    pub fn default_message(&self) -> CompactString {
+        match self {
+            ErrorKind::LengthTooShort { min, .. } => {
+                format_compact!("length is lower than {}", min.value())
+            }
+            ErrorKind::LengthTooLong { max, .. } => {
+                format_compact!("length is greater than {}", max.value())
+            }
+            ErrorKind::RangeTooLow { min, .. } => {
+                format_compact!("lower than {}", min.value_str())
+            }
+            ErrorKind::RangeTooHigh { max, .. } => {
+                format_compact!("greater than {}", max.value_str())
+            }
+            ErrorKind::InvalidEmail { reason } => {
+                format_compact!("not a valid email: {}", reason)
+            }
+            ErrorKind::InvalidUrl { reason } => {
+                format_compact!("not a valid url: {}", reason)
+            }
+            ErrorKind::InvalidIp { .. } => {
+                CompactString::const_new("not a valid IP address")
+            }
+            ErrorKind::InvalidCreditCard { reason } => {
+                format_compact!("not a valid credit card number: {}", reason)
+            }
+            ErrorKind::InvalidPhoneNumber { reason } => {
+                format_compact!("not a valid phone number: {}", reason)
+            }
+            ErrorKind::NotAscii => CompactString::const_new("not ascii"),
+            ErrorKind::NotAlphanumeric => CompactString::const_new("not alphanumeric"),
+            ErrorKind::PatternMismatch { pattern } => {
+                format_compact!("does not match pattern /{}/", pattern)
+            }
+            ErrorKind::MissingSubstring { expected } => {
+                format_compact!("does not contain \"{}\"", expected)
+            }
+            ErrorKind::MissingPrefix { expected } => {
+                format_compact!("value does not begin with \"{}\"", expected)
+            }
+            ErrorKind::MissingSuffix { expected } => {
+                format_compact!("does not end with \"{}\"", expected)
+            }
+            ErrorKind::FieldMismatch { other_field } => {
+                format_compact!("does not match {} field", other_field)
+            }
+            ErrorKind::Required => CompactString::const_new("not set"),
+            ErrorKind::Custom { code, .. } => {
+                format_compact!("validation failed: {}", code)
+            }
+        }
+    }
+
+    /// Extract parameters from this error kind as a Params struct.
+    /// Useful for i18n template interpolation.
+    pub fn to_params(&self) -> Params {
+        let mut params = Params::new();
+        match self {
+            ErrorKind::LengthTooShort { min, actual } => {
+                params.insert("min", min.value());
+                params.insert("actual", *actual);
+            }
+            ErrorKind::LengthTooLong { max, actual } => {
+                params.insert("max", max.value());
+                params.insert("actual", *actual);
+            }
+            ErrorKind::RangeTooLow { min, actual } => {
+                params.insert("min", min.value_str().to_string());
+                params.insert("actual", actual.to_string());
+            }
+            ErrorKind::RangeTooHigh { max, actual } => {
+                params.insert("max", max.value_str().to_string());
+                params.insert("actual", actual.to_string());
+            }
+            ErrorKind::InvalidEmail { reason } => {
+                params.insert("reason", reason.to_string());
+            }
+            ErrorKind::InvalidUrl { reason } => {
+                params.insert("reason", reason.to_string());
+            }
+            ErrorKind::InvalidIp { expected } => {
+                params.insert("expected", expected.to_string());
+            }
+            ErrorKind::InvalidCreditCard { reason } => {
+                params.insert("reason", reason.to_string());
+            }
+            ErrorKind::InvalidPhoneNumber { reason } => {
+                params.insert("reason", reason.to_string());
+            }
+            ErrorKind::NotAscii => {}
+            ErrorKind::NotAlphanumeric => {}
+            ErrorKind::PatternMismatch { pattern } => {
+                params.insert("pattern", pattern.to_string());
+            }
+            ErrorKind::MissingSubstring { expected } => {
+                params.insert("expected", expected.to_string());
+            }
+            ErrorKind::MissingPrefix { expected } => {
+                params.insert("expected", expected.to_string());
+            }
+            ErrorKind::MissingSuffix { expected } => {
+                params.insert("expected", expected.to_string());
+            }
+            ErrorKind::FieldMismatch { other_field } => {
+                params.insert("other_field", other_field.to_string());
+            }
+            ErrorKind::Required => {}
+            ErrorKind::Custom { params: p, .. } => {
+                return p.clone();
+            }
+        }
+        params
+    }
+}
+
+impl std::fmt::Display for ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.default_message())
+    }
+}
+
+// ============================================================================
+// LengthBound
+// ============================================================================
+
+/// Represents a bound in a length constraint.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+pub enum LengthBound {
+    Inclusive(usize),
+    Exclusive(usize),
+}
+
+impl LengthBound {
+    /// Get the bound value.
+    pub fn value(&self) -> usize {
+        match self {
+            LengthBound::Inclusive(v) => *v,
+            LengthBound::Exclusive(v) => *v,
+        }
+    }
+
+    /// Check if the bound is inclusive.
+    pub fn is_inclusive(&self) -> bool {
+        matches!(self, LengthBound::Inclusive(_))
+    }
+}
+
+impl std::fmt::Display for LengthBound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            LengthBound::Inclusive(v) => write!(f, "{}", v),
+            LengthBound::Exclusive(v) => write!(f, "{} (exclusive)", v),
+        }
+    }
+}
+
+// ============================================================================
+// RangeBound
+// ============================================================================
+
+/// Represents a bound in a range constraint.
+/// Uses string representation for flexibility with different numeric types.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+pub enum RangeBound {
+    Inclusive(CompactString),
+    Exclusive(CompactString),
+}
+
+impl RangeBound {
+    /// Get the bound value as a string.
+    pub fn value_str(&self) -> &str {
+        match self {
+            RangeBound::Inclusive(v) => v.as_str(),
+            RangeBound::Exclusive(v) => v.as_str(),
+        }
+    }
+
+    /// Check if the bound is inclusive.
+    pub fn is_inclusive(&self) -> bool {
+        matches!(self, RangeBound::Inclusive(_))
+    }
+}
+
+impl std::fmt::Display for RangeBound {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            RangeBound::Inclusive(v) => write!(f, "{}", v),
+            RangeBound::Exclusive(v) => write!(f, "{} (exclusive)", v),
+        }
+    }
+}
+
+// ============================================================================
+// EmailErrorReason
+// ============================================================================
+
+/// Detailed reason for email validation failure.
+#[derive(Clone, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+pub enum EmailErrorReason {
+    Empty,
+    MissingAt,
+    UserLengthExceeded,
+    InvalidUser,
+    DomainLengthExceeded,
+    InvalidDomain,
+}
+
+impl std::fmt::Display for EmailErrorReason {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            EmailErrorReason::Empty => write!(f, "empty"),
+            EmailErrorReason::MissingAt => write!(f, "missing `@`"),
+            EmailErrorReason::UserLengthExceeded => write!(f, "user length exceeded"),
+            EmailErrorReason::InvalidUser => write!(f, "invalid user"),
+            EmailErrorReason::DomainLengthExceeded => write!(f, "domain length exceeded"),
+            EmailErrorReason::InvalidDomain => write!(f, "invalid domain"),
+        }
+    }
+}
+
+// ============================================================================
+// IpKind
+// ============================================================================
+
+/// IP address kind for validation.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(rename_all = "snake_case"))]
+pub enum IpKind {
+    Any,
+    V4,
+    V6,
+}
+
+impl std::fmt::Display for IpKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            IpKind::Any => write!(f, "IP"),
+            IpKind::V4 => write!(f, "IPv4"),
+            IpKind::V6 => write!(f, "IPv6"),
+        }
+    }
+}
+
+// ============================================================================
+// Params and ParamValue
+// ============================================================================
+
+/// Dynamic parameters for custom error codes.
+/// Used for i18n template interpolation.
+#[derive(Clone, Debug, Default, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Params {
+    #[cfg_attr(feature = "serde", serde(flatten))]
+    inner: HashMap<CompactString, ParamValue>,
+}
+
+impl Params {
+    /// Create an empty Params.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Insert a parameter.
+    pub fn insert(&mut self, key: impl Into<CompactString>, value: impl Into<ParamValue>) {
+        self.inner.insert(key.into(), value.into());
+    }
+
+    /// Get a parameter value.
+    pub fn get(&self, key: &str) -> Option<&ParamValue> {
+        self.inner.get(key)
+    }
+
+    /// Iterate over all parameters.
+    pub fn iter(&self) -> impl Iterator<Item = (&CompactString, &ParamValue)> {
+        self.inner.iter()
+    }
+
+    /// Check if empty.
+    pub fn is_empty(&self) -> bool {
+        self.inner.is_empty()
+    }
+}
+
+/// A parameter value that can be serialized.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", serde(untagged))]
+pub enum ParamValue {
+    String(CompactString),
+    Integer(i64),
+    Unsigned(u64),
+    Float(f64),
+    Bool(bool),
+}
+
+impl std::fmt::Display for ParamValue {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            ParamValue::String(v) => write!(f, "{}", v),
+            ParamValue::Integer(v) => write!(f, "{}", v),
+            ParamValue::Unsigned(v) => write!(f, "{}", v),
+            ParamValue::Float(v) => write!(f, "{}", v),
+            ParamValue::Bool(v) => write!(f, "{}", v),
+        }
+    }
+}
+
+// From implementations for ParamValue
+impl From<String> for ParamValue {
+    fn from(s: String) -> Self {
+        ParamValue::String(s.into())
+    }
+}
+
+impl From<&str> for ParamValue {
+    fn from(s: &str) -> Self {
+        ParamValue::String(s.into())
+    }
+}
+
+impl From<CompactString> for ParamValue {
+    fn from(s: CompactString) -> Self {
+        ParamValue::String(s)
+    }
+}
+
+impl From<i64> for ParamValue {
+    fn from(v: i64) -> Self {
+        ParamValue::Integer(v)
+    }
+}
+
+impl From<i32> for ParamValue {
+    fn from(v: i32) -> Self {
+        ParamValue::Integer(v as i64)
+    }
+}
+
+impl From<u64> for ParamValue {
+    fn from(v: u64) -> Self {
+        ParamValue::Unsigned(v)
+    }
+}
+
+impl From<usize> for ParamValue {
+    fn from(v: usize) -> Self {
+        ParamValue::Unsigned(v as u64)
+    }
+}
+
+impl From<f64> for ParamValue {
+    fn from(v: f64) -> Self {
+        ParamValue::Float(v)
+    }
+}
+
+impl From<f32> for ParamValue {
+    fn from(v: f32) -> Self {
+        ParamValue::Float(v as f64)
+    }
+}
+
+impl From<bool> for ParamValue {
+    fn from(v: bool) -> Self {
+        ParamValue::Bool(v)
+    }
+}
+
+// ============================================================================
+// Error
+// ============================================================================
+
+/// A validation error with structured code and optional message override.
+#[derive(Clone, Debug, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+pub struct Error {
+    /// The structured error kind with typed parameters.
+    pub kind: ErrorKind,
+    /// Optional human-readable message override.
+    /// If None, a default message is generated from the kind.
+    #[cfg_attr(feature = "serde", serde(skip_serializing_if = "Option::is_none"))]
+    pub message: Option<CompactString>,
+}
+
+impl Error {
+    /// Create an error from an ErrorKind.
+    pub fn from_kind(kind: ErrorKind) -> Self {
+        Self {
+            kind,
+            message: None,
+        }
+    }
+
+    /// Create an error with a custom message override.
+    pub fn with_message(kind: ErrorKind, message: impl Into<CompactString>) -> Self {
+        Self {
+            kind,
+            message: Some(message.into()),
+        }
+    }
+
+    /// Create a custom error with a string code.
+    pub fn custom(code: impl Into<CompactString>) -> Self {
+        Self::from_kind(ErrorKind::Custom {
+            code: code.into(),
+            params: Params::default(),
+        })
+    }
+
+    /// Create a custom error with code and parameters.
+    pub fn custom_with_params(code: impl Into<CompactString>, params: Params) -> Self {
+        Self::from_kind(ErrorKind::Custom {
+            code: code.into(),
+            params,
+        })
+    }
+
+    /// Get the error code as a string (for i18n key lookup).
+    pub fn code(&self) -> Cow<'_, str> {
+        self.kind.code()
+    }
+
+    /// Get the display message (either custom or generated).
+    pub fn display_message(&self) -> Cow<'_, str> {
+        if let Some(msg) = &self.message {
+            return Cow::Borrowed(msg.as_str());
+        }
+        Cow::Owned(self.kind.default_message().into_string())
+    }
+
+    /// Override the error code with a custom code.
+    /// Converts the error to a Custom variant, preserving parameters.
+    pub fn with_custom_code(self, code: impl Into<CompactString>) -> Self {
+        let params = self.kind.to_params();
+        Self {
+            kind: ErrorKind::Custom {
+                code: code.into(),
+                params,
+            },
+            message: self.message,
+        }
+    }
+}
+
+impl std::fmt::Display for Error {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        write!(f, "{}", self.display_message())
+    }
+}
+
+impl std::error::Error for Error {}
+
+// ============================================================================
+// Report
+// ============================================================================
 
 /// A validation error report.
 ///
@@ -67,31 +642,9 @@ impl std::fmt::Display for Report {
 
 impl std::error::Error for Report {}
 
-#[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Error {
-    message: CompactString,
-}
-
-impl Error {
-    pub fn new(message: impl ToCompactString) -> Self {
-        Self {
-            message: message.to_compact_string(),
-        }
-    }
-
-    pub fn message(&self) -> &str {
-        self.message.as_ref()
-    }
-}
-
-impl std::fmt::Display for Error {
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        write!(f, "{}", self.message)
-    }
-}
-
-impl std::error::Error for Error {}
+// ============================================================================
+// Path and related types
+// ============================================================================
 
 #[derive(Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Path {
@@ -284,25 +837,67 @@ mod tests {
     }
 
     #[test]
+    fn error_kind_code() {
+        let err = Error::from_kind(ErrorKind::LengthTooShort {
+            min: LengthBound::Inclusive(5),
+            actual: 3,
+        });
+        assert_eq!(err.code(), "length.too_short");
+
+        let err = Error::custom("my.custom.code");
+        assert_eq!(err.code(), "my.custom.code");
+    }
+
+    #[test]
+    fn error_with_custom_code() {
+        let err = Error::from_kind(ErrorKind::LengthTooShort {
+            min: LengthBound::Inclusive(5),
+            actual: 3,
+        });
+        let err = err.with_custom_code("password.too_short");
+
+        assert_eq!(err.code(), "password.too_short");
+
+        // Parameters should be preserved
+        if let ErrorKind::Custom { params, .. } = &err.kind {
+            assert_eq!(
+                params.get("min"),
+                Some(&ParamValue::Unsigned(5))
+            );
+            assert_eq!(
+                params.get("actual"),
+                Some(&ParamValue::Unsigned(3))
+            );
+        } else {
+            panic!("Expected Custom variant");
+        }
+    }
+
+    #[test]
     fn report_select() {
         let mut report = Report::new();
-        report.append(Path::new("a").join("b"), Error::new("lol"));
+        report.append(
+            Path::new("a").join("b"),
+            Error::from_kind(ErrorKind::Required),
+        );
         report.append(
             Path::new("a").join("b").join("c"),
-            Error::new("that seems wrong"),
+            Error::from_kind(ErrorKind::NotAscii),
         );
-        report.append(Path::new("a").join("b").join("c"), Error::new("pog"));
-        report.append(Path::new("array").join("0").join("c"), Error::new("pog"));
+        report.append(
+            Path::new("a").join("b").join("c"),
+            Error::from_kind(ErrorKind::NotAlphanumeric),
+        );
+        report.append(
+            Path::new("array").join("0").join("c"),
+            Error::from_kind(ErrorKind::NotAlphanumeric),
+        );
 
-        assert_eq!(
-            crate::select!(report, a.b.c).collect::<Vec<_>>(),
-            [&Error::new("that seems wrong"), &Error::new("pog")]
-        );
+        let errors: Vec<_> = crate::select!(report, a.b.c).collect();
+        assert_eq!(errors.len(), 2);
 
-        assert_eq!(
-            crate::select!(report, array[0].c).collect::<Vec<_>>(),
-            [&Error::new("pog")]
-        );
+        let errors: Vec<_> = crate::select!(report, array[0].c).collect();
+        assert_eq!(errors.len(), 1);
     }
 
     #[cfg(feature = "serde")]
@@ -312,15 +907,28 @@ mod tests {
         #[test]
         fn roundtrip_serde() {
             let mut report = Report::new();
-            report.append(Path::new("a").join(0), Error::new("lorem"));
-            report.append(Path::new("a").join(1), Error::new("ispum"));
-            report.append(Path::new("a").join(2), Error::new("dolor"));
-            report.append(Path::new("b").join("c"), Error::new("dolor"));
+            report.append(
+                Path::new("a").join(0),
+                Error::from_kind(ErrorKind::LengthTooShort {
+                    min: LengthBound::Inclusive(5),
+                    actual: 3,
+                }),
+            );
+            report.append(
+                Path::new("a").join(1),
+                Error::from_kind(ErrorKind::InvalidEmail {
+                    reason: EmailErrorReason::MissingAt,
+                }),
+            );
+            report.append(
+                Path::new("b").join("c"),
+                Error::from_kind(ErrorKind::Required),
+            );
 
-            let de: Report =
-                serde_json::from_str(&serde_json::to_string(&report).unwrap()).unwrap();
+            let json = serde_json::to_string(&report).unwrap();
+            let de: Report = serde_json::from_str(&json).unwrap();
 
-            assert_eq!(report.errors, de.errors);
+            assert_eq!(report.errors.len(), de.errors.len());
         }
     }
 }

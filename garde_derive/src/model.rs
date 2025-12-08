@@ -70,6 +70,7 @@ pub struct Field {
 pub struct RawRule {
     pub span: Span,
     pub kind: RawRuleKind,
+    pub code: Option<Str>,
 }
 
 pub enum RawRuleKind {
@@ -238,27 +239,27 @@ impl RuleSet {
 
 #[repr(u8)]
 pub enum ValidateRule {
-    Required,
-    Ascii,
-    Alphanumeric,
-    Email,
-    Url,
-    Ip,
-    IpV4,
-    IpV6,
-    CreditCard,
-    PhoneNumber,
-    LengthSimple(LengthRange),
-    LengthBytes(LengthRange),
-    LengthChars(LengthRange),
-    LengthGraphemes(LengthRange),
-    LengthUtf16(LengthRange),
-    Matches(Path),
-    Range(ValidateRange<Expr>),
-    Contains(Expr),
-    Prefix(Expr),
-    Suffix(Expr),
-    Pattern(ValidatePattern),
+    Required(Option<String>),
+    Ascii(Option<String>),
+    Alphanumeric(Option<String>),
+    Email(Option<String>),
+    Url(Option<String>),
+    Ip(Option<String>),
+    IpV4(Option<String>),
+    IpV6(Option<String>),
+    CreditCard(Option<String>),
+    PhoneNumber(Option<String>),
+    LengthSimple(LengthRange, Option<String>),
+    LengthBytes(LengthRange, Option<String>),
+    LengthChars(LengthRange, Option<String>),
+    LengthGraphemes(LengthRange, Option<String>),
+    LengthUtf16(LengthRange, Option<String>),
+    Matches(Path, Option<String>),
+    Range(ValidateRange<Expr>, Option<String>),
+    Contains(Expr, Option<String>),
+    Prefix(Expr, Option<String>),
+    Suffix(Expr, Option<String>),
+    Pattern(ValidatePattern, Option<String>),
 }
 
 type LengthRange = ValidateRange<Either<usize, Expr>>;
@@ -266,27 +267,53 @@ type LengthRange = ValidateRange<Either<usize, Expr>>;
 impl ValidateRule {
     pub fn name(&self) -> &'static str {
         match self {
-            ValidateRule::Required => "required",
-            ValidateRule::Ascii => "ascii",
-            ValidateRule::Alphanumeric => "alphanumeric",
-            ValidateRule::Email => "email",
-            ValidateRule::Url => "url",
-            ValidateRule::Ip => "ip",
-            ValidateRule::IpV4 => "ip",
-            ValidateRule::IpV6 => "ip",
-            ValidateRule::CreditCard => "credit_card",
-            ValidateRule::PhoneNumber => "phone_number",
-            ValidateRule::LengthSimple(_) => "length::simple",
-            ValidateRule::LengthBytes(_) => "length::bytes",
-            ValidateRule::LengthChars(_) => "length::chars",
-            ValidateRule::LengthGraphemes(_) => "length::graphemes",
-            ValidateRule::LengthUtf16(_) => "length::utf16",
-            ValidateRule::Matches(_) => "matches",
-            ValidateRule::Range(_) => "range",
-            ValidateRule::Contains(_) => "contains",
-            ValidateRule::Prefix(_) => "prefix",
-            ValidateRule::Suffix(_) => "suffix",
-            ValidateRule::Pattern(_) => "pattern",
+            ValidateRule::Required(_) => "required",
+            ValidateRule::Ascii(_) => "ascii",
+            ValidateRule::Alphanumeric(_) => "alphanumeric",
+            ValidateRule::Email(_) => "email",
+            ValidateRule::Url(_) => "url",
+            ValidateRule::Ip(_) => "ip",
+            ValidateRule::IpV4(_) => "ip",
+            ValidateRule::IpV6(_) => "ip",
+            ValidateRule::CreditCard(_) => "credit_card",
+            ValidateRule::PhoneNumber(_) => "phone_number",
+            ValidateRule::LengthSimple(..) => "length::simple",
+            ValidateRule::LengthBytes(..) => "length::bytes",
+            ValidateRule::LengthChars(..) => "length::chars",
+            ValidateRule::LengthGraphemes(..) => "length::graphemes",
+            ValidateRule::LengthUtf16(..) => "length::utf16",
+            ValidateRule::Matches(..) => "matches",
+            ValidateRule::Range(..) => "range",
+            ValidateRule::Contains(..) => "contains",
+            ValidateRule::Prefix(..) => "prefix",
+            ValidateRule::Suffix(..) => "suffix",
+            ValidateRule::Pattern(..) => "pattern",
+        }
+    }
+
+    pub fn code(&self) -> Option<&String> {
+        match self {
+            ValidateRule::Required(code)
+            | ValidateRule::Ascii(code)
+            | ValidateRule::Alphanumeric(code)
+            | ValidateRule::Email(code)
+            | ValidateRule::Url(code)
+            | ValidateRule::Ip(code)
+            | ValidateRule::IpV4(code)
+            | ValidateRule::IpV6(code)
+            | ValidateRule::CreditCard(code)
+            | ValidateRule::PhoneNumber(code)
+            | ValidateRule::LengthSimple(_, code)
+            | ValidateRule::LengthBytes(_, code)
+            | ValidateRule::LengthChars(_, code)
+            | ValidateRule::LengthGraphemes(_, code)
+            | ValidateRule::LengthUtf16(_, code)
+            | ValidateRule::Matches(_, code)
+            | ValidateRule::Range(_, code)
+            | ValidateRule::Contains(_, code)
+            | ValidateRule::Prefix(_, code)
+            | ValidateRule::Suffix(_, code)
+            | ValidateRule::Pattern(_, code) => code.as_ref(),
         }
     }
 }

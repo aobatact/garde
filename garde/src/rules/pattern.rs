@@ -46,14 +46,13 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: Pattern, M: Matcher>(v: &T, (pat,): (&M,)) -> Result<(), Error> {
     if !v.validate_pattern(pat) {
-        return Err(Error::new(format!(
-            "does not match pattern /{}/",
-            pat.as_str()
-        )));
+        return Err(Error::from_kind(ErrorKind::PatternMismatch {
+            pattern: pat.as_str().into(),
+        }));
     }
     Ok(())
 }

@@ -304,7 +304,7 @@ fn check_rule(
     rule_set: &mut model::RuleSet,
     is_inner: bool,
 ) -> syn::Result<()> {
-    macro_rules! apply {
+    macro_rules! apply_field {
         ($name:ident = $value:expr, $span:expr) => {{
             if is_inner {
                 return Err(syn::Error::new(
@@ -322,9 +322,11 @@ fn check_rule(
                 None => field.$name = Some($value),
             }
         }};
+    }
 
-        ($rule:ident($($inner:expr)?), $span:expr) => {{
-            let rule = model::ValidateRule::$rule$(($inner))?;
+    macro_rules! apply_rule {
+        ($rule:expr, $span:expr) => {{
+            let rule = $rule;
             let name = rule.name();
             if !rule_set.rules.insert(rule) {
                 return Err(syn::Error::new($span, format!("duplicate rule `{name}`")));
@@ -333,41 +335,42 @@ fn check_rule(
     }
 
     let span = raw_rule.span;
+    let code = raw_rule.code.map(|s| s.value);
     use model::RawRuleKind::*;
     match raw_rule.kind {
-        Skip => apply!(skip = span, span),
-        Adapt(path) => apply!(adapter = path, span),
-        Rename(alias) => apply!(alias = alias.value, span),
-        // Message(message) => apply!(message = message, span),
-        Code(code) => apply!(code = code.value, span),
-        Dive(ctx) => apply!(dive = (span, ctx), span),
+        Skip => apply_field!(skip = span, span),
+        Adapt(path) => apply_field!(adapter = path, span),
+        Rename(alias) => apply_field!(alias = alias.value, span),
+        // Message(message) => apply_field!(message = message, span),
+        Code(field_code) => apply_field!(code = field_code.value, span),
+        Dive(ctx) => apply_field!(dive = (span, ctx), span),
         Custom(custom) => rule_set.custom_rules.push(custom),
-        Required => apply!(Required(), span),
-        Ascii => apply!(Ascii(), span),
-        Alphanumeric => apply!(Alphanumeric(), span),
-        Email => apply!(Email(), span),
-        Url => apply!(Url(), span),
-        Ip => apply!(Ip(), span),
-        IpV4 => apply!(IpV4(), span),
-        IpV6 => apply!(IpV6(), span),
-        CreditCard => apply!(CreditCard(), span),
-        PhoneNumber => apply!(PhoneNumber(), span),
+        Required => apply_rule!(model::ValidateRule::Required(code), span),
+        Ascii => apply_rule!(model::ValidateRule::Ascii(code), span),
+        Alphanumeric => apply_rule!(model::ValidateRule::Alphanumeric(code), span),
+        Email => apply_rule!(model::ValidateRule::Email(code), span),
+        Url => apply_rule!(model::ValidateRule::Url(code), span),
+        Ip => apply_rule!(model::ValidateRule::Ip(code), span),
+        IpV4 => apply_rule!(model::ValidateRule::IpV4(code), span),
+        IpV6 => apply_rule!(model::ValidateRule::IpV6(code), span),
+        CreditCard => apply_rule!(model::ValidateRule::CreditCard(code), span),
+        PhoneNumber => apply_rule!(model::ValidateRule::PhoneNumber(code), span),
         Length(v) => {
             let range = check_range_generic(v.range)?;
             match v.mode {
-                LengthMode::Simple => apply!(LengthSimple(range), span),
-                LengthMode::Bytes => apply!(LengthBytes(range), span),
-                LengthMode::Chars => apply!(LengthChars(range), span),
-                LengthMode::Graphemes => apply!(LengthGraphemes(range), span),
-                LengthMode::Utf16 => apply!(LengthUtf16(range), span),
+                LengthMode::Simple => apply_rule!(model::ValidateRule::LengthSimple(range, code), span),
+                LengthMode::Bytes => apply_rule!(model::ValidateRule::LengthBytes(range, code), span),
+                LengthMode::Chars => apply_rule!(model::ValidateRule::LengthChars(range, code), span),
+                LengthMode::Graphemes => apply_rule!(model::ValidateRule::LengthGraphemes(range, code), span),
+                LengthMode::Utf16 => apply_rule!(model::ValidateRule::LengthUtf16(range, code), span),
             }
         }
-        Matches(path) => apply!(Matches(path), span),
-        Range(v) => apply!(Range(check_range_not_ord(v)?), span),
-        Contains(v) => apply!(Contains(v), span),
-        Prefix(v) => apply!(Prefix(v), span),
-        Suffix(v) => apply!(Suffix(v), span),
-        Pattern(v) => apply!(Pattern(check_regex(v)?), span),
+        Matches(path) => apply_rule!(model::ValidateRule::Matches(path, code), span),
+        Range(v) => apply_rule!(model::ValidateRule::Range(check_range_not_ord(v)?, code), span),
+        Contains(v) => apply_rule!(model::ValidateRule::Contains(v, code), span),
+        Prefix(v) => apply_rule!(model::ValidateRule::Prefix(v, code), span),
+        Suffix(v) => apply_rule!(model::ValidateRule::Suffix(v, code), span),
+        Pattern(v) => apply_rule!(model::ValidateRule::Pattern(check_regex(v)?, code), span),
         Inner(v) => {
             if rule_set.inner.is_none() {
                 rule_set.inner = Some(Box::new(model::RuleSet::empty()));

@@ -13,7 +13,7 @@ mod test_adapter {
             
             pub fn apply<R: RangeBounds<usize>>(v: &str, range: &R) -> garde::Result {
                 if !range.contains(&v.len()) {
-                    Err(garde::Error::new("my custom error message"))
+                    Err(garde::Error::custom("my custom error message"))
                 } else {
                     Ok(())
                 }

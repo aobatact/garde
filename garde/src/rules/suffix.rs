@@ -17,11 +17,13 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: Suffix>(v: &T, (pat,): (&str,)) -> Result<(), Error> {
     if !v.validate_suffix(pat) {
-        return Err(Error::new(format!("does not end with \"{pat}\"")));
+        return Err(Error::from_kind(ErrorKind::MissingSuffix {
+            expected: pat.into(),
+        }));
     }
     Ok(())
 }

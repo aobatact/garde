@@ -245,75 +245,152 @@ where
     }
 }
 
+/// Helper to parse optional `code = "..."` from a parse stream
+fn parse_optional_code(input: syn::parse::ParseStream) -> syn::Result<Option<model::Str>> {
+    if input.is_empty() {
+        return Ok(None);
+    }
+    if input.peek(Token![,]) {
+        input.parse::<Token![,]>()?;
+        if input.is_empty() {
+            return Ok(None);
+        }
+        let ident = input.parse::<Ident>()?;
+        if ident != "code" {
+            return Err(syn::Error::new(ident.span(), "expected 'code'"));
+        }
+        input.parse::<Token![=]>()?;
+        Ok(Some(model::Str::parse(input)?))
+    } else {
+        Ok(None)
+    }
+}
+
 impl Parse for model::RawRule {
     fn parse(input: syn::parse::ParseStream) -> syn::Result<Self> {
         let ident = Ident::parse_any(input)?;
+        let span = ident.span();
 
-        macro_rules! rules {
-            (($input:ident, $ident:ident) {
-                $($name:literal => $rule:ident $(($content:ident))? $(( ? $content_opt:ident))?,)*
-            }) => {
-                match $ident.to_string().as_str() {
-                    $(
-                        $name => {
-                            $(
-                                let $content;
-                                syn::parenthesized!($content in $input);
-                                let $content = $content.parse()?;
-                            )?
-                            $(
-                                let $content_opt = if $input.peek(syn::token::Paren) {
-                                    let $content_opt;
-                                    syn::parenthesized!($content_opt in $input);
-                                    if $content_opt.is_empty() {
-                                        None
-                                    } else {
-                                        Some($content_opt.parse()?)
-                                    }
-                                } else {
-                                    None
-                                };
-                            )?
-                            Ok(model::RawRule {
-                                span: $ident.span(),
-                                kind: model::RawRuleKind::$rule $(($content))? $(($content_opt))?
-                            })
-                        }
-                    )*
-                    _ => Err(syn::Error::new($ident.span(), "unrecognized validation rule")),
-                }
+        // Helper macro for rules that don't support code parameter
+        macro_rules! no_code_rule {
+            ($rule:ident $(($content:expr))?) => {
+                Ok(model::RawRule {
+                    span,
+                    kind: model::RawRuleKind::$rule$(($content))?,
+                    code: None,
+                })
             };
         }
 
-        rules! {
-            (input, ident) {
-                "skip" => Skip,
-                "adapt" => Adapt(content),
-                "rename" => Rename(content),
-                // "message" => Message(content),
-                "code" => Code(content),
-                "dive" => Dive(? content),
-                "required" => Required,
-                "ascii" => Ascii,
-                "alphanumeric" => Alphanumeric,
-                "email" => Email,
-                "url" => Url,
-                "ip" => Ip,
-                "ipv4" => IpV4,
-                "ipv6" => IpV6,
-                "credit_card" => CreditCard,
-                "phone_number" => PhoneNumber,
-                "length" => Length(content),
-                "matches" => Matches(content),
-                "range" => Range(content),
-                "contains" => Contains(content),
-                "prefix" => Prefix(content),
-                "suffix" => Suffix(content),
-                "pattern" => Pattern(content),
-                "custom" => Custom(content),
-                "inner" => Inner(content),
-                "if" => If(content),
+        // Helper macro for simple rules (no args) that support optional code
+        macro_rules! simple_rule {
+            ($rule:ident) => {{
+                let code = if input.peek(syn::token::Paren) {
+                    let content;
+                    syn::parenthesized!(content in input);
+                    if content.is_empty() {
+                        None
+                    } else {
+                        // Parse code = "..."
+                        let ident = content.parse::<Ident>()?;
+                        if ident != "code" {
+                            return Err(syn::Error::new(ident.span(), "expected 'code'"));
+                        }
+                        content.parse::<Token![=]>()?;
+                        Some(model::Str::parse(&content)?)
+                    }
+                } else {
+                    None
+                };
+                Ok(model::RawRule {
+                    span,
+                    kind: model::RawRuleKind::$rule,
+                    code,
+                })
+            }};
+        }
+
+        // Helper macro for rules with required content that support optional code
+        macro_rules! content_rule {
+            ($rule:ident, $content_ty:ty) => {{
+                let content;
+                syn::parenthesized!(content in input);
+                let value = content.parse::<$content_ty>()?;
+                let code = parse_optional_code(&content)?;
+                Ok(model::RawRule {
+                    span,
+                    kind: model::RawRuleKind::$rule(value),
+                    code,
+                })
+            }};
+        }
+
+        match ident.to_string().as_str() {
+            // Rules that don't support code parameter
+            "skip" => no_code_rule!(Skip),
+            "adapt" => {
+                let content;
+                syn::parenthesized!(content in input);
+                no_code_rule!(Adapt(content.parse()?))
             }
+            "rename" => {
+                let content;
+                syn::parenthesized!(content in input);
+                no_code_rule!(Rename(content.parse()?))
+            }
+            "code" => {
+                let content;
+                syn::parenthesized!(content in input);
+                no_code_rule!(Code(content.parse()?))
+            }
+            "dive" => {
+                let ctx = if input.peek(syn::token::Paren) {
+                    let content;
+                    syn::parenthesized!(content in input);
+                    if content.is_empty() {
+                        None
+                    } else {
+                        Some(content.parse()?)
+                    }
+                } else {
+                    None
+                };
+                no_code_rule!(Dive(ctx))
+            }
+            "inner" => {
+                let content;
+                syn::parenthesized!(content in input);
+                no_code_rule!(Inner(content.parse()?))
+            }
+            "if" => {
+                let content;
+                syn::parenthesized!(content in input);
+                no_code_rule!(If(content.parse()?))
+            }
+
+            // Simple rules (no required args) that support optional code
+            "required" => simple_rule!(Required),
+            "ascii" => simple_rule!(Ascii),
+            "alphanumeric" => simple_rule!(Alphanumeric),
+            "email" => simple_rule!(Email),
+            "url" => simple_rule!(Url),
+            "ip" => simple_rule!(Ip),
+            "ipv4" => simple_rule!(IpV4),
+            "ipv6" => simple_rule!(IpV6),
+            "credit_card" => simple_rule!(CreditCard),
+            "phone_number" => simple_rule!(PhoneNumber),
+
+            // Rules with required content that support optional code
+            "length" => content_rule!(Length, model::RawLength),
+            "matches" => content_rule!(Matches, syn::Path),
+            "range" => content_rule!(Range, model::Range<syn::Expr>),
+            "contains" => content_rule!(Contains, syn::Expr),
+            "prefix" => content_rule!(Prefix, syn::Expr),
+            "suffix" => content_rule!(Suffix, syn::Expr),
+            "pattern" => content_rule!(Pattern, model::Pattern),
+            "custom" => content_rule!(Custom, syn::Expr),
+
+            _ => Err(syn::Error::new(ident.span(), "unrecognized validation rule")),
         }
     }
 }

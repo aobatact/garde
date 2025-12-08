@@ -3,11 +3,16 @@
 //! The entrypoint of this module is the [`Error`] type.
 #![allow(dead_code)]
 
+#[cfg(feature = "fluent")]
+mod fluent_support;
+
 mod rc_list;
 use std::borrow::Cow;
 use std::collections::HashMap;
 
 use compact_str::{format_compact, CompactString, ToCompactString};
+#[cfg(feature = "fluent")]
+pub use fluent_support::*;
 use smallvec::SmallVec;
 
 use self::rc_list::List;
@@ -122,6 +127,36 @@ impl ErrorKind {
         }
     }
 
+    /// Get the fluent message id for this error kind.
+    /// Uses hyphens instead of dots (e.g., "length-too_short" instead of "length.too_short").
+    /// For Custom variants, this allocates a new string.
+    pub fn fluent_code(&self) -> Cow<'static, str> {
+        match self {
+            ErrorKind::LengthTooShort { .. } => Cow::Borrowed("length-too_short"),
+            ErrorKind::LengthTooLong { .. } => Cow::Borrowed("length-too_long"),
+            ErrorKind::RangeTooLow { .. } => Cow::Borrowed("range-too_low"),
+            ErrorKind::RangeTooHigh { .. } => Cow::Borrowed("range-too_high"),
+            ErrorKind::InvalidEmail { .. } => Cow::Borrowed("email-invalid"),
+            ErrorKind::InvalidUrl { .. } => Cow::Borrowed("url-invalid"),
+            ErrorKind::InvalidIp { expected } => match expected {
+                IpKind::Any => Cow::Borrowed("ip-invalid"),
+                IpKind::V4 => Cow::Borrowed("ip-invalid_v4"),
+                IpKind::V6 => Cow::Borrowed("ip-invalid_v6"),
+            },
+            ErrorKind::InvalidCreditCard { .. } => Cow::Borrowed("credit_card-invalid"),
+            ErrorKind::InvalidPhoneNumber { .. } => Cow::Borrowed("phone_number-invalid"),
+            ErrorKind::NotAscii => Cow::Borrowed("ascii-invalid"),
+            ErrorKind::NotAlphanumeric => Cow::Borrowed("alphanumeric-invalid"),
+            ErrorKind::PatternMismatch { .. } => Cow::Borrowed("pattern-mismatch"),
+            ErrorKind::MissingSubstring { .. } => Cow::Borrowed("contains-missing"),
+            ErrorKind::MissingPrefix { .. } => Cow::Borrowed("prefix-missing"),
+            ErrorKind::MissingSuffix { .. } => Cow::Borrowed("suffix-missing"),
+            ErrorKind::FieldMismatch { .. } => Cow::Borrowed("matches-mismatch"),
+            ErrorKind::Required => Cow::Borrowed("required"),
+            ErrorKind::Custom { code, .. } => Cow::Owned(code.replace('.', "-")),
+        }
+    }
+
     /// Generate a default English message for this error kind.
     pub fn default_message(&self) -> CompactString {
         match self {
@@ -147,7 +182,7 @@ impl ErrorKind {
                 IpKind::Any => CompactString::const_new("not a valid IP address"),
                 IpKind::V4 => CompactString::const_new("not a valid IPv4 address"),
                 IpKind::V6 => CompactString::const_new("not a valid IPv6 address"),
-            }
+            },
             ErrorKind::InvalidCreditCard { reason } => {
                 format_compact!("not a valid credit card number: {}", reason)
             }
@@ -862,14 +897,8 @@ mod tests {
 
         // Parameters should be preserved
         if let ErrorKind::Custom { params, .. } = &err.kind {
-            assert_eq!(
-                params.get("min"),
-                Some(&ParamValue::Unsigned(5))
-            );
-            assert_eq!(
-                params.get("actual"),
-                Some(&ParamValue::Unsigned(3))
-            );
+            assert_eq!(params.get("min"), Some(&ParamValue::Unsigned(5)));
+            assert_eq!(params.get("actual"), Some(&ParamValue::Unsigned(3)));
         } else {
             panic!("Expected Custom variant");
         }

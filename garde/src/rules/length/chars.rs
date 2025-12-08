@@ -2,8 +2,9 @@
 //!
 //! See also: [`chars` on `str`](https://doc.rust-lang.org/std/primitive.str.html#method.chars).
 
-use crate::error::Error;
 use std::ops::RangeBounds;
+
+use crate::error::Error;
 
 pub fn apply<T: Chars<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_num_chars(range)

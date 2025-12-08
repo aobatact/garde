@@ -10,7 +10,7 @@ mod test_adapter {
 
         pub mod simple {
             use std::ops::RangeBounds;
-            
+
             pub fn apply<R: RangeBounds<usize>>(v: &str, range: &R) -> garde::Result {
                 if !range.contains(&v.len()) {
                     Err(garde::Error::custom("my custom error message"))

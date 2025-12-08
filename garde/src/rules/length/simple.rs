@@ -3,8 +3,9 @@
 //! The meaning of "length" depends on the type.
 //! For example, the length of a `String` is defined as the number of _bytes_ it stores.
 
-use crate::error::Error;
 use std::ops::RangeBounds;
+
+use crate::error::Error;
 
 pub fn apply<T: Simple<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_length(range)

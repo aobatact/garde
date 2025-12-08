@@ -2,8 +2,9 @@
 //!
 //! `garde` implementations of this trait use the [unicode-segmentation](https://crates.io/crates/unicode-segmentation) crate.
 
-use crate::error::Error;
 use std::ops::RangeBounds;
+
+use crate::error::Error;
 
 pub fn apply<T: Graphemes<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_num_graphemes(range)

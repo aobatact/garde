@@ -260,37 +260,37 @@ impl ToTokens for Rules<'_> {
             let name = TokenStream2::from_str(rule.name()).unwrap();
             use model::ValidateRule::*;
             let args = match rule {
-                Ascii | Alphanumeric | Email | Url | CreditCard | PhoneNumber | Required => {
+                Ascii(_) | Alphanumeric(_) | Email(_) | Url(_) | CreditCard(_) | PhoneNumber(_) | Required(_) => {
                     quote!(())
                 }
-                Ip => {
+                Ip(_) => {
                     quote!((#rules_mod::ip::IpKind::Any,))
                 }
-                IpV4 => {
+                IpV4(_) => {
                     quote!((#rules_mod::ip::IpKind::V4,))
                 }
-                IpV6 => {
+                IpV6(_) => {
                     quote!((#rules_mod::ip::IpKind::V6,))
                 }
-                LengthSimple(range)
-                | LengthBytes(range)
-                | LengthChars(range)
-                | LengthGraphemes(range)
-                | LengthUtf16(range) => {
+                LengthSimple(range, _)
+                | LengthBytes(range, _)
+                | LengthChars(range, _)
+                | LengthGraphemes(range, _)
+                | LengthUtf16(range, _) => {
                     let bounds = &range.bounds;
                     quote_spanned!(range.span() => &(#bounds))
                 },
-                Matches(path) => {
+                Matches(path, _) => {
                     quote!((stringify!(#path), &self.#path))
                 }
-                Range(range) => {
+                Range(range, _) => {
                     let bounds = &range.bounds;
                     quote_spanned!(range.span() => (&(#bounds)))
                 },
-                Contains(expr) | Prefix(expr) | Suffix(expr) => {
+                Contains(expr, _) | Prefix(expr, _) | Suffix(expr, _) => {
                     quote_spanned!(expr.span() => (&#expr,))
                 }
-                Pattern(pat) => match pat {
+                Pattern(pat, _) => match pat {
                     model::ValidatePattern::Expr(expr) => quote_spanned!(expr.span() => (&#expr,)),
                     #[cfg(all(feature = "regex", feature = "js-sys"))]
                     model::ValidatePattern::Lit(s) => quote!({
@@ -320,34 +320,19 @@ impl ToTokens for Rules<'_> {
                 },
             };
 
-            let function_call = match rule {
-                Range(_) => {
-                    quote! {
-                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
-                            __garde_report.append(__garde_path(), __garde_error);
-                        }
-                    }
-                }
-                LengthSimple(_)
-                | LengthBytes(_)
-                | LengthChars(_)
-                | LengthGraphemes(_)
-                | LengthUtf16(_) => {
-                    quote! {
-                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
-                            __garde_report.append(__garde_path(), __garde_error);
-                        }
-                    }
-                }
-                _ => {
-                    quote! {
-                        if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
-                            __garde_report.append(__garde_path(), __garde_error);
-                        }
-                    }
+            // Generate the error handling code, with optional custom code
+            let custom_code = rule.code();
+            let error_transform = match custom_code {
+                Some(code) => quote! { __garde_error.with_custom_code(#code) },
+                None => quote! { __garde_error },
+            };
+
+            let function_call = quote! {
+                if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                    __garde_report.append(__garde_path(), #error_transform);
                 }
             };
-            
+
             function_call.to_tokens(tokens)
         }
     }

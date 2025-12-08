@@ -5,6 +5,4 @@ expression: snapshot
 Test {
     v: "",
 }
-v: my custom error message
-
-
+v: validation failed: my custom error message

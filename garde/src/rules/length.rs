@@ -59,7 +59,7 @@ pub use simple::HasSimpleLength;
 pub mod utf16;
 pub use utf16::HasUtf16CodeUnits;
 
-use crate::error::Error;
+use crate::error::{Error, ErrorKind, LengthBound};
 use std::ops::RangeBounds;
 
 pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> {
@@ -68,12 +68,18 @@ pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> 
     match range.start_bound() {
         Bound::Included(&min) => {
             if len < min {
-                return Err(Error::new(format!("length is lower than {min}")));
+                return Err(Error::from_kind(ErrorKind::LengthTooShort {
+                    min: LengthBound::Inclusive(min),
+                    actual: len,
+                }));
             }
         }
         Bound::Excluded(&min) => {
             if len <= min {
-                return Err(Error::new(format!("length is lower than or equal to {min}")));
+                return Err(Error::from_kind(ErrorKind::LengthTooShort {
+                    min: LengthBound::Exclusive(min),
+                    actual: len,
+                }));
             }
         }
         Bound::Unbounded => {}
@@ -82,12 +88,18 @@ pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> 
     match range.end_bound() {
         Bound::Included(&max) => {
             if len > max {
-                return Err(Error::new(format!("length is greater than {max}")));
+                return Err(Error::from_kind(ErrorKind::LengthTooLong {
+                    max: LengthBound::Inclusive(max),
+                    actual: len,
+                }));
             }
         }
         Bound::Excluded(&max) => {
             if len >= max {
-                return Err(Error::new(format!("length is greater than or equal to {max}")));
+                return Err(Error::from_kind(ErrorKind::LengthTooLong {
+                    max: LengthBound::Exclusive(max),
+                    actual: len,
+                }));
             }
         }
         Bound::Unbounded => {}

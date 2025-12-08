@@ -19,5 +19,3 @@ Test {
 }
 field: value does not begin with "test"
 inner[0]: value does not begin with "test"
-
-

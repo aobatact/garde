@@ -15,11 +15,13 @@
 use std::fmt::Display;
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: CreditCard>(v: &T, _: ()) -> Result<(), Error> {
     if let Err(e) = v.validate_credit_card() {
-        return Err(Error::new(format!("not a valid credit card number: {e}")));
+        return Err(Error::from_kind(ErrorKind::InvalidCreditCard {
+            reason: e.to_string().into(),
+        }));
     }
     Ok(())
 }

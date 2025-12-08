@@ -13,11 +13,11 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: Alphanumeric>(v: &T, _: ()) -> Result<(), Error> {
     if !v.validate_alphanumeric() {
-        return Err(Error::new("not alphanumeric"));
+        return Err(Error::from_kind(ErrorKind::NotAlphanumeric));
     }
     Ok(())
 }

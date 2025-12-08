@@ -52,5 +52,3 @@ rc.field: length is lower than 1
 slice[0].field: length is lower than 1
 tuples[0].field: length is lower than 1
 tuples[1].field: length is lower than 1
-
-

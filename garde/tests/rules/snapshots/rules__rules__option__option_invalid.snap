@@ -54,7 +54,7 @@ alphanumeric: not alphanumeric
 ascii: not ascii
 contains_a: does not contain "a"
 credit_card: not a valid credit card number: invalid format
-email: not a valid email: value is missing `@`
+email: not a valid email: missing `@`
 ip: not a valid IP address
 length_min1: length is lower than 1
 length_min1_u8_slice: length is lower than 1

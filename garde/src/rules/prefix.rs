@@ -17,11 +17,13 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: Prefix>(v: &T, (pat,): (&str,)) -> Result<(), Error> {
     if !v.validate_prefix(pat) {
-        return Err(Error::new(format!("value does not begin with \"{pat}\"")));
+        return Err(Error::from_kind(ErrorKind::MissingPrefix {
+            expected: pat.into(),
+        }));
     }
     Ok(())
 }

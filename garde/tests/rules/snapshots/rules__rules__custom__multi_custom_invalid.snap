@@ -8,9 +8,7 @@ Multi {
         "asdf",
     ],
 }
-field: not equal to test
-field: not equal to test
-inner[0]: not equal to test
-inner[0]: not equal to test
-
-
+field: validation failed: not equal to test
+field: validation failed: not equal to test
+inner[0]: validation failed: not equal to test
+inner[0]: validation failed: not equal to test

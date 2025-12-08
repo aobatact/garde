@@ -17,11 +17,13 @@
 //! This trait has a blanket implementation for all `T: garde::rules::AsStr`.
 
 use super::AsStr;
-use crate::error::Error;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: Contains>(v: &T, (pat,): (&str,)) -> Result<(), Error> {
     if !v.validate_contains(pat) {
-        return Err(Error::new(format!("does not contain \"{pat}\"")));
+        return Err(Error::from_kind(ErrorKind::MissingSubstring {
+            expected: pat.into(),
+        }));
     }
     Ok(())
 }

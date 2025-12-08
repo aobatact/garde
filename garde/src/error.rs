@@ -143,8 +143,10 @@ impl ErrorKind {
             ErrorKind::InvalidUrl { reason } => {
                 format_compact!("not a valid url: {}", reason)
             }
-            ErrorKind::InvalidIp { .. } => {
-                CompactString::const_new("not a valid IP address")
+            ErrorKind::InvalidIp { expected } => match expected {
+                IpKind::Any => CompactString::const_new("not a valid IP address"),
+                IpKind::V4 => CompactString::const_new("not a valid IPv4 address"),
+                IpKind::V6 => CompactString::const_new("not a valid IPv6 address"),
             }
             ErrorKind::InvalidCreditCard { reason } => {
                 format_compact!("not a valid credit card number: {}", reason)

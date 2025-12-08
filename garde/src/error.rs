@@ -11,8 +11,6 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use compact_str::{format_compact, CompactString, ToCompactString};
-#[cfg(feature = "fluent")]
-pub use fluent_support::*;
 use smallvec::SmallVec;
 
 use self::rc_list::List;

@@ -54,6 +54,15 @@ impl ErrorKind {
     }
 }
 
+impl Error {
+    /// Format this error using a FluentBundle.
+    ///
+    /// Delegates to `ErrorKind::format_with_bundle`.
+    pub fn format_with_bundle(self, bundle: &FluentBundle<FluentResource>) -> String {
+        self.kind.format_with_bundle(bundle)
+    }
+}
+
 impl Params {
     /// Convert Params to FluentArgs.
     pub fn to_fluent_args(&self) -> FluentArgs<'_> {

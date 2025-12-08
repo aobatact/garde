@@ -180,60 +180,60 @@ impl ErrorKind {
 
     /// Extract parameters from this error kind as a Params struct.
     /// Useful for i18n template interpolation.
-    pub fn to_params(&self) -> Params {
+    pub fn into_params(self) -> Params {
         let mut params = Params::new();
         match self {
             ErrorKind::LengthTooShort { min, actual } => {
-                params.insert("min", min.value());
-                params.insert("actual", *actual);
+                params.insert(CompactString::const_new("min"), min.value());
+                params.insert(CompactString::const_new("actual"), actual);
             }
             ErrorKind::LengthTooLong { max, actual } => {
-                params.insert("max", max.value());
-                params.insert("actual", *actual);
+                params.insert(CompactString::const_new("max"), max.value());
+                params.insert(CompactString::const_new("actual"), actual);
             }
             ErrorKind::RangeTooLow { min, actual } => {
-                params.insert("min", min.value_str().to_string());
-                params.insert("actual", actual.to_string());
+                params.insert(CompactString::const_new("min"), min.value_str());
+                params.insert(CompactString::const_new("actual"), actual);
             }
             ErrorKind::RangeTooHigh { max, actual } => {
-                params.insert("max", max.value_str().to_string());
-                params.insert("actual", actual.to_string());
+                params.insert(CompactString::const_new("max"), max.value_str());
+                params.insert(CompactString::const_new("actual"), actual);
             }
             ErrorKind::InvalidEmail { reason } => {
-                params.insert("reason", reason.to_string());
+                params.insert(CompactString::const_new("reason"), reason.to_string());
             }
             ErrorKind::InvalidUrl { reason } => {
-                params.insert("reason", reason.to_string());
+                params.insert(CompactString::const_new("reason"), reason);
             }
             ErrorKind::InvalidIp { expected } => {
-                params.insert("expected", expected.to_string());
+                params.insert(CompactString::const_new("expected"), expected.to_string());
             }
             ErrorKind::InvalidCreditCard { reason } => {
-                params.insert("reason", reason.to_string());
+                params.insert(CompactString::const_new("reason"), reason);
             }
             ErrorKind::InvalidPhoneNumber { reason } => {
-                params.insert("reason", reason.to_string());
+                params.insert(CompactString::const_new("reason"), reason);
             }
             ErrorKind::NotAscii => {}
             ErrorKind::NotAlphanumeric => {}
             ErrorKind::PatternMismatch { pattern } => {
-                params.insert("pattern", pattern.to_string());
+                params.insert(CompactString::const_new("pattern"), pattern);
             }
             ErrorKind::MissingSubstring { expected } => {
-                params.insert("expected", expected.to_string());
+                params.insert(CompactString::const_new("expected"), expected);
             }
             ErrorKind::MissingPrefix { expected } => {
-                params.insert("expected", expected.to_string());
+                params.insert(CompactString::const_new("expected"), expected);
             }
             ErrorKind::MissingSuffix { expected } => {
-                params.insert("expected", expected.to_string());
+                params.insert(CompactString::const_new("expected"), expected);
             }
             ErrorKind::FieldMismatch { other_field } => {
-                params.insert("other_field", other_field.to_string());
+                params.insert(CompactString::const_new("other_field"), other_field);
             }
             ErrorKind::Required => {}
             ErrorKind::Custom { params: p, .. } => {
-                return p.clone();
+                return p;
             }
         }
         params
@@ -565,7 +565,7 @@ impl Error {
     /// Override the error code with a custom code.
     /// Converts the error to a Custom variant, preserving parameters.
     pub fn with_custom_code(self, code: impl Into<CompactString>) -> Self {
-        let params = self.kind.to_params();
+        let params = self.kind.into_params();
         Self {
             kind: ErrorKind::Custom {
                 code: code.into(),

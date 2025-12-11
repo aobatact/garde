@@ -57,10 +57,11 @@ pub mod simple;
 pub use simple::HasSimpleLength;
 
 pub mod utf16;
+use std::ops::RangeBounds;
+
 pub use utf16::HasUtf16CodeUnits;
 
 use crate::error::{Error, ErrorKind, LengthBound};
-use std::ops::RangeBounds;
 
 pub fn apply<R: RangeBounds<usize>>(len: usize, range: &R) -> Result<(), Error> {
     use std::ops::Bound;

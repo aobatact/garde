@@ -15,10 +15,9 @@
 use std::fmt::Display;
 
 use super::AsStr;
-use crate::error::{Error, ErrorKind};
-
 // Re-export IpKind for use in generated code
 pub use crate::error::IpKind;
+use crate::error::{Error, ErrorKind};
 
 pub fn apply<T: Ip>(v: &T, (kind,): (IpKind,)) -> Result<(), Error> {
     if v.validate_ip(kind).is_err() {

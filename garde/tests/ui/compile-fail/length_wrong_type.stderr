@@ -1,32 +1,32 @@
 error[E0277]: the trait bound `&str: RangeBounds<usize>` is not satisfied
  --> tests/ui/compile-fail/length_wrong_type.rs
   |
-  | #[derive(garde::Validate)]
-  |          --------------- required by a bound introduced by this call
-  | struct Test<'a> {
-  |     #[garde(length("invalid_syntax"))]  // Invalid range syntax
-  |                    ^^^^^^^^^^^^^^^^ the trait `RangeBounds<usize>` is not implemented for `&str`
-  |
+ 3 | #[derive(garde::Validate)]
+   |          --------------- required by a bound introduced by this call
+ 4 | struct Test<'a> {
+ 5 |     #[garde(length("invalid_syntax"))]  // Invalid range syntax
+   |                    ^^^^^^^^^^^^^^^^ the trait `RangeBounds<usize>` is not implemented for `&str`
+   |
 note: required by a bound in `garde::rules::length::simple::apply`
- --> src/rules/length/simple.rs
-  |
-  | pub fn apply<T: Simple<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
-  |                               ^^^^^^^^^^^^^^^^^^ required by this bound in `apply`
+  --> src/rules/length/simple.rs
+   |
+   | pub fn apply<T: Simple<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+   |                               ^^^^^^^^^^^^^^^^^^ required by this bound in `apply`
 
 error[E0277]: the trait bound `&str: Simple<&str>` is not satisfied
  --> tests/ui/compile-fail/length_wrong_type.rs
   |
-  | #[derive(garde::Validate)]
-  |          ^^^^^^^^^^^^^^^ the trait `RangeBounds<usize>` is not implemented for `&str`
-  |
-  = help: the following other types implement trait `Simple<R>`:
-            &[T; N]
-            Option<T>
-            [T; N]
-  = note: required for `&str` to implement `Simple<&str>`
+ 3 | #[derive(garde::Validate)]
+   |          ^^^^^^^^^^^^^^^ the trait `RangeBounds<usize>` is not implemented for `&str`
+   |
+   = help: the following other types implement trait `Simple<R>`:
+             &[T; N]
+             Option<T>
+             [T; N]
+   = note: required for `&str` to implement `Simple<&str>`
 note: required by a bound in `garde::rules::length::simple::apply`
- --> src/rules/length/simple.rs
-  |
-  | pub fn apply<T: Simple<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
-  |                 ^^^^^^^^^ required by this bound in `apply`
-  = note: this error originates in the derive macro `garde::Validate` (in Nightly builds, run with -Z macro-backtrace for more info)
+  --> src/rules/length/simple.rs
+   |
+   | pub fn apply<T: Simple<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
+   |                 ^^^^^^^^^ required by this bound in `apply`
+   = note: this error originates in the derive macro `garde::Validate` (in Nightly builds, run with -Z macro-backtrace for more info)

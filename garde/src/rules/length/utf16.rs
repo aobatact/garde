@@ -1,7 +1,8 @@
 //! Implemented by string-like types for which we can retrieve length in _UTF-16 code units_.
 
-use crate::error::Error;
 use std::ops::RangeBounds;
+
+use crate::error::Error;
 
 pub fn apply<T: Utf16CodeUnits<R>, R: RangeBounds<usize>>(v: &T, range: &R) -> Result<(), Error> {
     v.validate_num_code_units(range)

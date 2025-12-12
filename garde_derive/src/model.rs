@@ -242,12 +242,16 @@ pub enum ValidateRule {
     Required(Option<String>),
     Ascii(Option<String>),
     Alphanumeric(Option<String>),
+    #[cfg_attr(not(feature = "email"), allow(dead_code))]
     Email(Option<String>),
+    #[cfg_attr(not(feature = "url"), allow(dead_code))]
     Url(Option<String>),
     Ip(Option<String>),
     IpV4(Option<String>),
     IpV6(Option<String>),
+    #[cfg_attr(not(feature = "credit-card"), allow(dead_code))]
     CreditCard(Option<String>),
+    #[cfg_attr(not(feature = "phone-number"), allow(dead_code))]
     PhoneNumber(Option<String>),
     LengthSimple(LengthRange, Option<String>),
     LengthBytes(LengthRange, Option<String>),

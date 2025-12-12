@@ -454,29 +454,29 @@ impl Parse for model::RawLength {
                 
                 // Parse as range expression
                 let expr = input.parse::<syn::Expr>()?;
-                return Ok(model::RawLength {
+                Ok(model::RawLength {
                     mode,
                     range: model::Range {
                         span,
                         expr: model::Either::Right(expr),
                     },
-                });
+                })
             } else {
-                return Err(syn::Error::new(
+                Err(syn::Error::new(
                     mode_ident.span(),
                     "length mode must be followed by a range expression (e.g., `bytes, 1..=10`)"
-                ));
+                ))
             }
         } else {
             // Parse as range expression with default mode
             let expr = input.parse::<syn::Expr>()?;
-            return Ok(model::RawLength {
+            Ok(model::RawLength {
                 mode: model::LengthMode::default(),
                 range: model::Range {
                     span,
                     expr: model::Either::Right(expr),
                 },
-            });
+            })
         }
     }
 }

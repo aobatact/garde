@@ -348,13 +348,45 @@ fn check_rule(
         Required => apply_rule!(model::ValidateRule::Required(code), span),
         Ascii => apply_rule!(model::ValidateRule::Ascii(code), span),
         Alphanumeric => apply_rule!(model::ValidateRule::Alphanumeric(code), span),
+        #[cfg(feature = "email")]
         Email => apply_rule!(model::ValidateRule::Email(code), span),
+        #[cfg(not(feature = "email"))]
+        Email => {
+            return Err(syn::Error::new(
+                span,
+                "email feature must be enabled to use email rule",
+            ));
+        }
+        #[cfg(feature = "url")]
         Url => apply_rule!(model::ValidateRule::Url(code), span),
+        #[cfg(not(feature = "url"))]
+        Url => {
+            return Err(syn::Error::new(
+                span,
+                "url feature must be enabled to use url rule",
+            ));
+        }
         Ip => apply_rule!(model::ValidateRule::Ip(code), span),
         IpV4 => apply_rule!(model::ValidateRule::IpV4(code), span),
         IpV6 => apply_rule!(model::ValidateRule::IpV6(code), span),
+        #[cfg(feature = "credit-card")]
         CreditCard => apply_rule!(model::ValidateRule::CreditCard(code), span),
+        #[cfg(not(feature = "credit-card"))]
+        CreditCard => {
+            return Err(syn::Error::new(
+                span,
+                "credit-card feature must be enabled to use credit_card rule",
+            ));
+        }
+        #[cfg(feature = "phone-number")]
         PhoneNumber => apply_rule!(model::ValidateRule::PhoneNumber(code), span),
+        #[cfg(not(feature = "phone-number"))]
+        PhoneNumber => {
+            return Err(syn::Error::new(
+                span,
+                "phone-number feature must be enabled to use phone_number rule",
+            ));
+        }
         Length(v) => {
             let range = check_range_generic(v.range)?;
             match v.mode {
@@ -450,10 +482,12 @@ fn check_regex(value: model::Pattern) -> syn::Result<model::ValidatePattern> {
                 Ok(model::ValidatePattern::Lit(lit.value))
             }
             #[cfg(not(feature = "regex"))]
-            Err(syn::Error::new(
-                lit.span,
-                "regex feature must be enabled to use literal patterns",
-            ))
+            {
+                return Err(syn::Error::new(
+                    lit.span,
+                    "regex feature must be enabled to use literal pattern rule",
+                ));
+            }
         }
         model::Pattern::Expr(expr) => Ok(model::ValidatePattern::Expr(expr)),
     }

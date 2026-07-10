@@ -8,6 +8,16 @@ use crate::model;
 use crate::model::LengthMode;
 use crate::util::{default_ctx_name, MaybeFoldError};
 
+macro_rules! require_feature {
+    ($feature:literal, $rule_name:literal, $span:expr) => {
+        #[cfg(not(feature = $feature))]
+        return Err(syn::Error::new(
+            $span,
+            concat!($feature, " feature must be enabled to use ", $rule_name, " rule"),
+        ));
+    };
+}
+
 pub fn check(input: model::Input) -> syn::Result<model::Validate> {
     let model::Input {
         ident,
@@ -361,13 +371,25 @@ fn check_rule(
         Required => apply!(Required(), span),
         Ascii => apply!(Ascii(), span),
         Alphanumeric => apply!(Alphanumeric(), span),
-        Email => apply!(Email(), span),
-        Url => apply!(Url(), span),
+        Email => {
+            require_feature!("email", "email", span);
+            apply!(Email(), span)
+        }
+        Url => {
+            require_feature!("url", "url", span);
+            apply!(Url(), span)
+        }
         Ip => apply!(Ip(), span),
         IpV4 => apply!(IpV4(), span),
         IpV6 => apply!(IpV6(), span),
-        CreditCard => apply!(CreditCard(), span),
-        PhoneNumber => apply!(PhoneNumber(), span),
+        CreditCard => {
+            require_feature!("credit-card", "credit_card", span);
+            apply!(CreditCard(), span)
+        }
+        PhoneNumber => {
+            require_feature!("phone-number", "phone_number", span);
+            apply!(PhoneNumber(), span)
+        }
         Length(v) => {
             let range = check_range_generic(v.range)?;
             match v.mode {
@@ -574,10 +596,10 @@ fn check_regex(value: model::Pattern) -> syn::Result<model::ValidatePattern> {
                 Ok(model::ValidatePattern::Lit(lit.value))
             }
             #[cfg(not(feature = "regex"))]
-            Err(syn::Error::new(
-                lit.span,
-                "regex feature must be enabled to use literal patterns",
-            ))
+            {
+                require_feature!("regex", "literal pattern", lit.span);
+                unreachable!()
+            }
         }
         model::Pattern::Expr(expr) => Ok(model::ValidatePattern::Expr(expr)),
     }

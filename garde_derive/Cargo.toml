@@ -22,6 +22,10 @@ url = []
 credit-card = []
 phone-number = []
 js-sys = []
+email = []
+url = []
+credit-card = []
+phone-number = []
 
 [dependencies]
 proc-macro2 = { version = "1" }

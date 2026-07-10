@@ -156,6 +156,7 @@ pub struct Range<T> {
     pub min: Option<T>,
     pub max: Option<T>,
     pub equal: Option<T>,
+    pub bound: Option<Expr>,
 }
 
 pub struct List<T> {
@@ -321,6 +322,10 @@ pub enum ValidateRange<T> {
     LowerThan(T),
     Between(T, T),
     Equal(T),
+    /// An arbitrary expression implementing [`std::ops::RangeBounds`], used by
+    /// the `bound = <expr>` argument. This is mutually exclusive with
+    /// `min`/`max`/`equal`.
+    Bound(Expr),
 }
 
 pub enum ValidateVariant {

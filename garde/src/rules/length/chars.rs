@@ -8,6 +8,14 @@ pub fn apply<T: Chars>(v: &T, (min, max): (usize, usize)) -> Result<(), Error> {
     v.validate_num_chars(min, max)
 }
 
+pub fn apply_bounds<T: Chars, R: std::ops::RangeBounds<usize>>(
+    v: &T,
+    (bounds,): (R,),
+) -> Result<(), Error> {
+    let (min, max) = super::bounds_to_min_max(&bounds);
+    v.validate_num_chars(min, max)
+}
+
 pub trait Chars {
     fn validate_num_chars(&self, min: usize, max: usize) -> Result<(), Error>;
 }

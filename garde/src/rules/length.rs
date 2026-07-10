@@ -27,6 +27,17 @@
 //! }
 //! ```
 //!
+//! Instead of `min`/`max`, an arbitrary [`RangeBounds`][std::ops::RangeBounds]
+//! expression may be provided via `bound`. This is mutually exclusive with
+//! `min`, `max`, and `equal`:
+//! ```rust
+//! #[derive(garde::Validate)]
+//! struct Test {
+//!     #[garde(length(bound = 1..=100))]
+//!     v: String,
+//! }
+//! ```
+//!
 //! Here's what implementing the trait for a custom string-like type might look like:
 //! ```rust
 //! #[repr(transparent)]
@@ -59,6 +70,8 @@ pub use simple::HasSimpleLength;
 pub mod utf16;
 pub use utf16::HasUtf16CodeUnits;
 
+use std::ops::{Bound, RangeBounds};
+
 use crate::error::Error;
 
 fn check_len(len: usize, min: usize, max: usize) -> Result<(), Error> {
@@ -69,4 +82,24 @@ fn check_len(len: usize, min: usize, max: usize) -> Result<(), Error> {
     } else {
         Ok(())
     }
+}
+
+/// Convert an arbitrary [`RangeBounds<usize>`] into the inclusive `(min, max)`
+/// pair used by [`check_len`].
+///
+/// Because length is measured in discrete `usize` units, exclusive bounds are
+/// mapped exactly to inclusive ones by shifting them by one (saturating at the
+/// `usize` limits).
+fn bounds_to_min_max<R: RangeBounds<usize>>(bounds: &R) -> (usize, usize) {
+    let min = match bounds.start_bound() {
+        Bound::Included(&min) => min,
+        Bound::Excluded(&min) => min.saturating_add(1),
+        Bound::Unbounded => usize::MIN,
+    };
+    let max = match bounds.end_bound() {
+        Bound::Included(&max) => max,
+        Bound::Excluded(&max) => max.saturating_sub(1),
+        Bound::Unbounded => usize::MAX,
+    };
+    (min, max)
 }

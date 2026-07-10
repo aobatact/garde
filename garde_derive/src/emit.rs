@@ -288,6 +288,10 @@ impl ToTokens for Rules<'_> {
         for rule in rule_set.rules.iter() {
             let name = TokenStream2::from_str(rule.name()).unwrap();
             use model::ValidateRule::*;
+            // Most rules dispatch to the rule module's `apply` function. The
+            // `bound = <expr>` form of `range`/`length` dispatches to
+            // `apply_bounds` instead, which accepts a `RangeBounds` value.
+            let mut apply_fn = quote!(apply);
             let args = match rule {
                 Ascii | Alphanumeric | Email | Url | CreditCard | PhoneNumber | Required => {
                     quote!(())
@@ -318,6 +322,10 @@ impl ToTokens for Rules<'_> {
                     model::ValidateRange::Equal(equal) => {
                         quote!((#equal, #equal))
                     }
+                    model::ValidateRange::Bound(expr) => {
+                        apply_fn = quote!(apply_bounds);
+                        quote_spanned!(expr.span() => (#expr,))
+                    }
                 },
                 Matches(path) => {
                     quote!((stringify!(#path), &self.#path))
@@ -327,6 +335,10 @@ impl ToTokens for Rules<'_> {
                     model::ValidateRange::LowerThan(max) => quote!((None, Some(#max))),
                     model::ValidateRange::Between(min, max) => quote!((Some(#min), Some(#max))),
                     model::ValidateRange::Equal(equal) => quote!((Some(#equal), Some(#equal))),
+                    model::ValidateRange::Bound(expr) => {
+                        apply_fn = quote!(apply_bounds);
+                        quote_spanned!(expr.span() => (#expr,))
+                    }
                 },
                 Contains(expr) | Prefix(expr) | Suffix(expr) => {
                     quote_spanned!(expr.span() => (&#expr,))
@@ -362,7 +374,7 @@ impl ToTokens for Rules<'_> {
             };
 
             quote! {
-                if let Err(__garde_error) = (#rules_mod::#name::apply)(&*__garde_binding, #args) {
+                if let Err(__garde_error) = (#rules_mod::#name::#apply_fn)(&*__garde_binding, #args) {
                     __garde_report.append(__garde_path(), __garde_error);
                 }
             }

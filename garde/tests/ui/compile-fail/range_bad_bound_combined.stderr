@@ -1,0 +1,5 @@
+error: `bound` is mutually exclusive with `min`, `max`, and `equal`
+ --> tests/ui/compile-fail/range_bad_bound_combined.rs
+  |
+  |     #[garde(range(bound = 1..10, min = 1))]
+  |                   ^^^^^

@@ -25,6 +25,13 @@ struct Test<'a> {
     graphemes: &'a str,
     #[garde(length(utf16, equal = 1))]
     utf16: &'a str,
+
+    #[garde(length(bound = 10..=100))]
+    bound: &'a str,
+    #[garde(length(bytes, bound = 10..100))]
+    bound_bytes: &'a str,
+    #[garde(inner(length(bound = 10..=100)))]
+    inner_bound: &'a [&'a str],
 }
 
 fn main() {}

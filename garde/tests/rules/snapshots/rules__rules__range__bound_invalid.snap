@@ -1,0 +1,83 @@
+---
+source: garde/tests/./rules/range.rs
+assertion_line: 124
+expression: snapshot
+---
+Bound {
+    inclusive: 100,
+    exclusive: 100,
+    from: 10,
+    to: 99,
+    float: 0.5,
+    inner: [
+        10,
+        99,
+    ],
+}
+exclusive: greater than 100
+
+Bound {
+    inclusive: 101,
+    exclusive: 99,
+    from: 10,
+    to: 99,
+    float: 0.5,
+    inner: [
+        10,
+        99,
+    ],
+}
+inclusive: greater than 100
+
+Bound {
+    inclusive: 100,
+    exclusive: 99,
+    from: 9,
+    to: 99,
+    float: 0.5,
+    inner: [
+        10,
+        99,
+    ],
+}
+from: lower than 10
+
+Bound {
+    inclusive: 100,
+    exclusive: 99,
+    from: 10,
+    to: 100,
+    float: 0.5,
+    inner: [
+        10,
+        99,
+    ],
+}
+to: greater than 100
+
+Bound {
+    inclusive: 100,
+    exclusive: 99,
+    from: 10,
+    to: 99,
+    float: 1.0,
+    inner: [
+        10,
+        99,
+    ],
+}
+float: greater than 1
+
+Bound {
+    inclusive: 100,
+    exclusive: 99,
+    from: 10,
+    to: 99,
+    float: 0.5,
+    inner: [
+        9,
+        100,
+    ],
+}
+inner[0]: lower than 10
+inner[1]: greater than 100

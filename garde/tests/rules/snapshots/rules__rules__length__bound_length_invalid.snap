@@ -1,0 +1,53 @@
+---
+source: garde/tests/./rules/length.rs
+assertion_line: 184
+expression: snapshot
+---
+Bound {
+    inclusive: "aaaaaaaaa",
+    exclusive: "aaaaaaaaaaaaaaaaaaaaa",
+    from: "aaaaaaaaaa",
+    bytes: "😂",
+    inner: [
+        "a",
+        "bb",
+    ],
+}
+inclusive: length is lower than 10
+
+Bound {
+    inclusive: "aaaaaaaaaa",
+    exclusive: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    from: "aaaaaaaaaa",
+    bytes: "😂",
+    inner: [
+        "a",
+        "bb",
+    ],
+}
+exclusive: length is greater than 99
+
+Bound {
+    inclusive: "aaaaaaaaaa",
+    exclusive: "aaaaaaaaaaaaaaaaaaaaa",
+    from: "aaaaaaaaa",
+    bytes: "😂",
+    inner: [
+        "a",
+        "bb",
+    ],
+}
+from: length is lower than 10
+
+Bound {
+    inclusive: "aaaaaaaaaa",
+    exclusive: "aaaaaaaaaaaaaaaaaaaaa",
+    from: "aaaaaaaaaa",
+    bytes: "😂",
+    inner: [
+        "",
+        "bbb",
+    ],
+}
+inner[0]: length is lower than 1
+inner[1]: length is greater than 2

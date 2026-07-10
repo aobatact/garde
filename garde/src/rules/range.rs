@@ -8,11 +8,24 @@
 //! }
 //! ```
 //!
+//! Instead of `min`/`max`, an arbitrary [`RangeBounds`][std::ops::RangeBounds]
+//! expression may be provided via `bound`. This is mutually exclusive with
+//! `min`, `max`, and `equal`:
+//!
+//! ```rust
+//! #[derive(garde::Validate)]
+//! struct Test {
+//!     #[garde(range(bound = 10..=100))]
+//!     v: u64,
+//! }
+//! ```
+//!
 //! The entrypoint is the [`Bounds`] trait. Implementing this trait for a type allows that type to be used with the `#[garde(range(...))]` rule.
 //!
 //! This trait is implemented for all primitive integer types.
 
 use std::fmt::Display;
+use std::ops::{Bound, RangeBounds};
 
 use crate::error::Error;
 
@@ -32,6 +45,31 @@ pub fn apply<T: Bounds>(
     Ok(())
 }
 
+#[inline]
+pub fn apply_bounds<T, R>(v: &T, (bounds,): (R,)) -> Result<(), Error>
+where
+    T: Bounds,
+    R: RangeBounds<T::Size>,
+{
+    match v.validate_range_bounds(&bounds) {
+        Ok(()) => Ok(()),
+        Err(OutOfBounds::Lower) => {
+            let min = match bounds.start_bound() {
+                Bound::Included(min) | Bound::Excluded(min) => min as &dyn Display,
+                Bound::Unbounded => &T::MIN,
+            };
+            Err(Error::new(i18n!(range_lower_than, min)))
+        }
+        Err(OutOfBounds::Upper) => {
+            let max = match bounds.end_bound() {
+                Bound::Included(max) | Bound::Excluded(max) => max as &dyn Display,
+                Bound::Unbounded => &T::MAX,
+            };
+            Err(Error::new(i18n!(range_greater_than, max)))
+        }
+    }
+}
+
 pub trait Bounds: PartialOrd {
     type Size: Copy + Sized + Display;
 
@@ -43,6 +81,29 @@ pub trait Bounds: PartialOrd {
         lower_bound: Self::Size,
         upper_bound: Self::Size,
     ) -> Result<(), OutOfBounds>;
+
+    /// Validate that `self` lies within `bounds`, honoring the inclusive or
+    /// exclusive nature of each end.
+    ///
+    /// The default implementation treats exclusive bounds as inclusive (it
+    /// forwards to [`validate_bounds`][Bounds::validate_bounds]). All
+    /// implementations provided by `garde` override this to respect
+    /// exclusivity, so custom implementors who care about exclusive bounds
+    /// should override it too.
+    fn validate_range_bounds<R>(&self, bounds: &R) -> Result<(), OutOfBounds>
+    where
+        R: RangeBounds<Self::Size>,
+    {
+        let lower_bound = match bounds.start_bound() {
+            Bound::Included(&bound) | Bound::Excluded(&bound) => bound,
+            Bound::Unbounded => Self::MIN,
+        };
+        let upper_bound = match bounds.end_bound() {
+            Bound::Included(&bound) | Bound::Excluded(&bound) => bound,
+            Bound::Unbounded => Self::MAX,
+        };
+        self.validate_bounds(lower_bound, upper_bound)
+    }
 }
 
 pub enum OutOfBounds {
@@ -72,6 +133,23 @@ macro_rules! impl_for {
                         Ok(())
                     }
                 }
+
+                fn validate_range_bounds<R>(&self, bounds: &R) -> Result<(), OutOfBounds>
+                where
+                    R: RangeBounds<Self::Size>,
+                {
+                    match bounds.start_bound() {
+                        Bound::Included(lower) if self < lower => return Err(OutOfBounds::Lower),
+                        Bound::Excluded(lower) if self <= lower => return Err(OutOfBounds::Lower),
+                        _ => {}
+                    }
+                    match bounds.end_bound() {
+                        Bound::Included(upper) if self > upper => return Err(OutOfBounds::Upper),
+                        Bound::Excluded(upper) if self >= upper => return Err(OutOfBounds::Upper),
+                        _ => {}
+                    }
+                    Ok(())
+                }
             }
         )*
     };
@@ -95,6 +173,16 @@ impl<T: Bounds> Bounds for Option<T> {
     ) -> Result<(), OutOfBounds> {
         match self {
             Some(value) => value.validate_bounds(lower_bound, upper_bound),
+            None => Ok(()),
+        }
+    }
+
+    fn validate_range_bounds<R>(&self, bounds: &R) -> Result<(), OutOfBounds>
+    where
+        R: RangeBounds<Self::Size>,
+    {
+        match self {
+            Some(value) => value.validate_range_bounds(bounds),
             None => Ok(()),
         }
     }

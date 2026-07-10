@@ -400,6 +400,7 @@ impl Parse for model::RawLength {
         let mut min = None;
         let mut max = None;
         let mut equal = None;
+        let mut bound = None;
 
         for arg in args {
             let arg = match arg {
@@ -410,6 +411,13 @@ impl Parse for model::RawLength {
                 }
             };
             match arg {
+                RawLengthArgument::Bound(span, v) => {
+                    if bound.is_some() {
+                        error.maybe_fold(syn::Error::new(span, "duplicate argument"))
+                    } else {
+                        bound = Some(v)
+                    }
+                }
                 RawLengthArgument::Min(span, v) => {
                     if min.is_some() {
                         error.maybe_fold(syn::Error::new(span, "duplicate argument"))
@@ -452,6 +460,7 @@ impl Parse for model::RawLength {
                 min,
                 max,
                 equal,
+                bound,
             },
         })
     }
@@ -461,6 +470,7 @@ enum RawLengthArgument {
     Min(Span, model::Either<usize, syn::Expr>),
     Max(Span, model::Either<usize, syn::Expr>),
     Equal(Span, model::Either<usize, syn::Expr>),
+    Bound(Span, syn::Expr),
     Mode(Span, model::LengthMode),
 }
 
@@ -488,6 +498,11 @@ impl Parse for RawLengthArgument {
                 let _ = input.parse::<Token![=]>()?;
                 let v = input.parse::<syn::Expr>()?;
                 RawLengthArgument::Equal(span, FromExpr::from_expr(v)?)
+            }
+            "bound" => {
+                let _ = input.parse::<Token![=]>()?;
+                let v = input.parse::<syn::Expr>()?;
+                RawLengthArgument::Bound(span, v)
             }
             _ => {
                 if input.peek(Token![=]) {
@@ -517,9 +532,16 @@ where
         let mut min = None::<T>;
         let mut max = None::<T>;
         let mut equal = None::<T>;
+        let mut bound = None::<syn::Expr>;
 
         for pair in pairs {
-            if pair.path.is_ident("min") {
+            if pair.path.is_ident("bound") {
+                if bound.is_some() {
+                    error.maybe_fold(syn::Error::new(pair.path.span(), "duplicate argument"));
+                    continue;
+                }
+                bound = Some(pair.value);
+            } else if pair.path.is_ident("min") {
                 if min.is_some() {
                     error.maybe_fold(syn::Error::new(pair.path.span(), "duplicate argument"));
                     continue;
@@ -579,6 +601,7 @@ where
                 min,
                 max,
                 equal,
+                bound,
             })
         }
     }

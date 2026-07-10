@@ -8,6 +8,14 @@ pub fn apply<T: Graphemes>(v: &T, (min, max): (usize, usize)) -> Result<(), Erro
     v.validate_num_graphemes(min, max)
 }
 
+pub fn apply_bounds<T: Graphemes, R: std::ops::RangeBounds<usize>>(
+    v: &T,
+    (bounds,): (R,),
+) -> Result<(), Error> {
+    let (min, max) = super::bounds_to_min_max(&bounds);
+    v.validate_num_graphemes(min, max)
+}
+
 pub trait Graphemes {
     fn validate_num_graphemes(&self, min: usize, max: usize) -> Result<(), Error>;
 }

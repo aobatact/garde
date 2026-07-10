@@ -6,6 +6,14 @@ pub fn apply<T: Utf16CodeUnits>(v: &T, (min, max): (usize, usize)) -> Result<(),
     v.validate_num_code_units(min, max)
 }
 
+pub fn apply_bounds<T: Utf16CodeUnits, R: std::ops::RangeBounds<usize>>(
+    v: &T,
+    (bounds,): (R,),
+) -> Result<(), Error> {
+    let (min, max) = super::bounds_to_min_max(&bounds);
+    v.validate_num_code_units(min, max)
+}
+
 pub trait Utf16CodeUnits {
     fn validate_num_code_units(&self, min: usize, max: usize) -> Result<(), Error>;
 }

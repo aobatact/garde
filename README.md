@@ -1,6 +1,7 @@
 # Garde &emsp; [![Documentation]][docs.rs] [![Latest Version]][crates.io]
 
 [docs.rs]: https://docs.rs/garde/latest/garde/
+[std-rangebounds]: https://doc.rust-lang.org/std/ops/trait.RangeBounds.html
 [crates.io]: https://crates.io/crates/garde
 [Documentation]: https://img.shields.io/docsrs/garde
 [Latest Version]: https://img.shields.io/crates/v/garde.svg
@@ -95,8 +96,10 @@ if let Err(e) = data.validate() {
 | credit card  | `#[garde(credit_card)]`                                             | a credit card number                                                                                              | `credit-card`  |
 | phone number | `#[garde(phone_number)]`                                            | a phone number                                                                                                    | `phone-number` |
 | length       | `#[garde(length(<mode>, min=<usize>, max=<usize>, equal=<usize>)]`  | a container with length in `min..=max` or `equal`                                                                 | -              |
+| length       | `#[garde(length(<mode>, bound=<range>))]`                          | a container with length in an arbitrary [`RangeBounds`][std-rangebounds]                                            | -              |
 | matches      | `#[garde(matches(<field>))]`                                        | a field matches another field                                                                                     | -              |
 | range        | `#[garde(range(min=<expr>, max=<expr>, equal=<expr>))]`             | a number in the range `min..=max` or `equal`                                                                      | -              |
+| range        | `#[garde(range(bound=<range>))]`                                    | a number within an arbitrary [`RangeBounds`][std-rangebounds]                                                       | -              |
 | contains     | `#[garde(contains(<string>))]`                                      | a string-like value containing a substring                                                                        | -              |
 | prefix       | `#[garde(prefix(<string>))]`                                        | a string-like value prefixed by some string                                                                       | -              |
 | suffix       | `#[garde(suffix(<string>))]`                                        | a string-like value suffixed by some string                                                                       | -              |
@@ -115,6 +118,7 @@ Additional notes:
   - If `equal` is defined, `min` and `max` must be omitted.
   - Assuming `equal` is omitted, either `min` or `max` may be omitted, but not both.
   - `min` and `max` use an *inclusive* upper bound (`min..=max`). Setting `min == max` is equivalent to using `equal`.
+  - `bound` accepts any expression implementing [`std::ops::RangeBounds`][std-rangebounds] (e.g. `10..100`, `10..=100`, `10..`, `..100`), and honors the inclusive/exclusive nature of each end. It is mutually exclusive with `min`, `max`, and `equal`.
 - For `contains`, `prefix`, and `suffix`, the pattern must be a string literal, because the `Pattern` API [is currently unstable](https://github.com/rust-lang/rust/issues/27721).
 - For `if` conditional validation:
   - The condition expression can access `self` fields and context variables (e.g., `ctx`).

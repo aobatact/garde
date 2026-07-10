@@ -88,6 +88,73 @@ fn exact_length_invalid() {
 }
 
 #[derive(Debug, garde::Validate)]
+struct Bound {
+    #[garde(range(bound = 10..=100))]
+    inclusive: u64,
+    #[garde(range(bound = 10..100))]
+    exclusive: u64,
+    #[garde(range(bound = 10..))]
+    from: u64,
+    #[garde(range(bound = ..100))]
+    to: u64,
+    #[garde(range(bound = 0.0..1.0))]
+    float: f64,
+    #[garde(inner(range(bound = 10..100)))]
+    inner: &'static [u64],
+}
+
+fn valid_bound() -> Bound {
+    Bound {
+        inclusive: 100,
+        exclusive: 99,
+        from: 10,
+        to: 99,
+        float: 0.5,
+        inner: &[10, 99],
+    }
+}
+
+#[test]
+fn bound_valid() {
+    util::check_ok(&[valid_bound()], &())
+}
+
+#[test]
+fn bound_invalid() {
+    util::check_fail!(
+        &[
+            Bound {
+                // exclusive upper bound rejects the endpoint
+                exclusive: 100,
+                ..valid_bound()
+            },
+            Bound {
+                inclusive: 101,
+                ..valid_bound()
+            },
+            Bound {
+                from: 9,
+                ..valid_bound()
+            },
+            Bound {
+                to: 100,
+                ..valid_bound()
+            },
+            Bound {
+                // exclusive float upper bound rejects the endpoint
+                float: 1.0,
+                ..valid_bound()
+            },
+            Bound {
+                inner: &[9, 100],
+                ..valid_bound()
+            },
+        ],
+        &()
+    )
+}
+
+#[derive(Debug, garde::Validate)]
 struct MinMaxEqual {
     #[garde(range(min = 40, max = 40))]
     min_max: u64,

@@ -450,8 +450,15 @@ where
                     model::ValidateRange::Between($wrapper(v1), $wrapper(v2))
                 }
                 model::ValidateRange::Equal(v) => model::ValidateRange::Equal($wrapper(v)),
+                // `bound` is handled before this macro is ever reached, but the
+                // match must remain exhaustive over `ValidateRange`.
+                model::ValidateRange::Bound(expr) => model::ValidateRange::Bound(expr),
             }
         }};
+    }
+
+    if range.bound.is_some() {
+        return check_range_not_ord(range);
     }
 
     let range = match (range.span, range.min, range.max, range.equal) {
@@ -462,6 +469,7 @@ where
                     min: Some(min),
                     max: Some(max),
                     equal: None,
+                    bound: None,
                 })?,
                 model::Either::Left
             )
@@ -473,6 +481,7 @@ where
                     min: Some(min),
                     max: None,
                     equal: None,
+                    bound: None,
                 })?,
                 model::Either::Left
             )
@@ -484,6 +493,7 @@ where
                     min: None,
                     max: Some(max),
                     equal: None,
+                    bound: None,
                 })?,
                 model::Either::Left
             )
@@ -495,6 +505,7 @@ where
                     min: None,
                     max: None,
                     equal: Some(equal),
+                    bound: None,
                 })?,
                 model::Either::Left
             )
@@ -504,6 +515,7 @@ where
             min,
             max,
             equal,
+            bound: None,
         })?,
     };
 
@@ -514,6 +526,10 @@ fn check_range<T>(range: model::Range<T>) -> syn::Result<model::ValidateRange<T>
 where
     T: PartialOrd,
 {
+    if let Some(bound) = range.bound {
+        return check_bound(range.span, bound, range.min, range.max, range.equal);
+    }
+
     if let Some(equal) = range.equal {
         return if range.min.is_some() || range.max.is_some() {
             Err(syn::Error::new(
@@ -541,6 +557,10 @@ where
 }
 
 fn check_range_not_ord<T>(range: model::Range<T>) -> syn::Result<model::ValidateRange<T>> {
+    if let Some(bound) = range.bound {
+        return check_bound(range.span, bound, range.min, range.max, range.equal);
+    }
+
     if let Some(equal) = range.equal {
         return if range.min.is_some() || range.max.is_some() {
             Err(syn::Error::new(
@@ -561,6 +581,23 @@ fn check_range_not_ord<T>(range: model::Range<T>) -> syn::Result<model::Validate
             "range must have at least one of `min`, `max`, `equal`",
         )),
     }
+}
+
+fn check_bound<T>(
+    span: Span,
+    bound: Expr,
+    min: Option<T>,
+    max: Option<T>,
+    equal: Option<T>,
+) -> syn::Result<model::ValidateRange<T>> {
+    if min.is_some() || max.is_some() || equal.is_some() {
+        return Err(syn::Error::new(
+            span,
+            "`bound` is mutually exclusive with `min`, `max`, and `equal`",
+        ));
+    }
+
+    Ok(model::ValidateRange::Bound(bound))
 }
 
 fn check_regex(value: model::Pattern) -> syn::Result<model::ValidatePattern> {

@@ -151,6 +151,61 @@ fn min_max_equal_length_invalid() {
 }
 
 #[derive(Debug, garde::Validate)]
+struct Bound<'a> {
+    #[garde(length(bound = 10..=100))]
+    inclusive: &'a str,
+    #[garde(length(bound = 10..100))]
+    exclusive: &'a str,
+    #[garde(length(bound = 10..))]
+    from: &'a str,
+    #[garde(length(bytes, bound = 1..=4))]
+    bytes: &'a str,
+    #[garde(inner(length(bound = 1..=2)))]
+    inner: &'a [&'a str],
+}
+
+fn valid_length_bound() -> Bound<'static> {
+    Bound {
+        inclusive: "aaaaaaaaaa",             // 10
+        exclusive: "aaaaaaaaaaaaaaaaaaaaa",  // 21
+        from: "aaaaaaaaaa",                  // 10
+        bytes: "😂",                         // 4 bytes
+        inner: &["a", "bb"],
+    }
+}
+
+#[test]
+fn bound_length_valid() {
+    util::check_ok(&[valid_length_bound()], &())
+}
+
+#[test]
+fn bound_length_invalid() {
+    util::check_fail!(
+        &[
+            Bound {
+                inclusive: "aaaaaaaaa", // 9
+                ..valid_length_bound()
+            },
+            Bound {
+                // exclusive upper bound rejects length 100
+                exclusive: "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+                ..valid_length_bound()
+            },
+            Bound {
+                from: "aaaaaaaaa", // 9
+                ..valid_length_bound()
+            },
+            Bound {
+                inner: &["", "bbb"],
+                ..valid_length_bound()
+            },
+        ],
+        &()
+    )
+}
+
+#[derive(Debug, garde::Validate)]
 struct SpecialLengthTest<'a> {
     #[garde(length(simple, max = 1))]
     simple: &'a str,

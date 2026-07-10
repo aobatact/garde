@@ -8,6 +8,14 @@ pub fn apply<T: Bytes>(v: &T, (min, max): (usize, usize)) -> Result<(), Error> {
     v.validate_num_bytes(min, max)
 }
 
+pub fn apply_bounds<T: Bytes, R: std::ops::RangeBounds<usize>>(
+    v: &T,
+    (bounds,): (R,),
+) -> Result<(), Error> {
+    let (min, max) = super::bounds_to_min_max(&bounds);
+    v.validate_num_bytes(min, max)
+}
+
 pub trait Bytes {
     fn validate_num_bytes(&self, min: usize, max: usize) -> Result<(), Error>;
 }

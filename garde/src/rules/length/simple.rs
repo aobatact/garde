@@ -9,6 +9,14 @@ pub fn apply<T: Simple>(v: &T, (min, max): (usize, usize)) -> Result<(), Error> 
     v.validate_length(min, max)
 }
 
+pub fn apply_bounds<T: Simple, R: std::ops::RangeBounds<usize>>(
+    v: &T,
+    (bounds,): (R,),
+) -> Result<(), Error> {
+    let (min, max) = super::bounds_to_min_max(&bounds);
+    v.validate_length(min, max)
+}
+
 pub trait Simple {
     fn validate_length(&self, min: usize, max: usize) -> Result<(), Error>;
 }
